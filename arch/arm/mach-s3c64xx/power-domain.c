@@ -31,6 +31,7 @@ struct s3c64xx_pd_data {
 	struct regulator_dev *dev;
 	int microvolts;
 	int ctrlbit;
+	int statbit;
 };
 
 static struct regulator_consumer_supply s3c64xx_domain_g_supply[] = {
@@ -108,6 +109,7 @@ struct s3c64xx_pd_config {
 	int microvolts;
 	struct regulator_init_data *init_data;
 	int ctrlbit;
+	int statbit;
 };
 
 static struct s3c64xx_pd_config s3c64xx_domain_g_pdata = {
@@ -115,6 +117,7 @@ static struct s3c64xx_pd_config s3c64xx_domain_g_pdata = {
 	.microvolts = 5000000,
 	.init_data = &s3c64xx_domain_g_data,
 	.ctrlbit = S3C64XX_NORMALCFG_DOMAIN_G_ON,
+	.statbit = S3C64XX_BLKPWRSTAT_G,
 };
 
 static struct s3c64xx_pd_config s3c64xx_domain_v_pdata = {
@@ -122,6 +125,7 @@ static struct s3c64xx_pd_config s3c64xx_domain_v_pdata = {
 	.microvolts = 5000000,
 	.init_data = &s3c64xx_domain_v_data,
 	.ctrlbit = S3C64XX_NORMALCFG_DOMAIN_V_ON,
+	.statbit = S3C64XX_BLKPWRSTAT_V,
 };
 
 static struct s3c64xx_pd_config s3c64xx_domain_i_pdata = {
@@ -129,6 +133,7 @@ static struct s3c64xx_pd_config s3c64xx_domain_i_pdata = {
 	.microvolts = 5000000,
 	.init_data = &s3c64xx_domain_i_data,
 	.ctrlbit = S3C64XX_NORMALCFG_DOMAIN_I_ON,
+	.statbit = S3C64XX_BLKPWRSTAT_I,
 };
 
 static struct s3c64xx_pd_config s3c64xx_domain_p_pdata = {
@@ -136,6 +141,7 @@ static struct s3c64xx_pd_config s3c64xx_domain_p_pdata = {
 	.microvolts = 5000000,
 	.init_data = &s3c64xx_domain_p_data,
 	.ctrlbit = S3C64XX_NORMALCFG_DOMAIN_P_ON,
+	.statbit = S3C64XX_BLKPWRSTAT_P,
 };
 
 static struct s3c64xx_pd_config s3c64xx_domain_f_pdata = {
@@ -143,6 +149,7 @@ static struct s3c64xx_pd_config s3c64xx_domain_f_pdata = {
 	.microvolts = 5000000,
 	.init_data = &s3c64xx_domain_f_data,
 	.ctrlbit = S3C64XX_NORMALCFG_DOMAIN_F_ON,
+	.statbit = S3C64XX_BLKPWRSTAT_F,
 };
 
 struct platform_device s3c64xx_domain_g = {
@@ -213,17 +220,17 @@ static int s3c64xx_pd_pwr_off(int ctrl)
 	return -ETIME;
 }
 
-static int s3c64xx_pd_ctrl(int ctrlbit, int enable)
+static int s3c64xx_pd_ctrl(int ctrlbit, int statbit, int enable)
 {
 	u32 pd_reg = __raw_readl(S3C64XX_NORMAL_CFG);
 
 	if (enable) {
 		__raw_writel((pd_reg | ctrlbit), S3C64XX_NORMAL_CFG);
-		if (s3c64xx_pd_pwr_done(ctrlbit))
+		if (s3c64xx_pd_pwr_done(statbit))
 			return -ETIME;
 	} else {
 		__raw_writel((pd_reg & ~(ctrlbit)), S3C64XX_NORMAL_CFG);
-		if (s3c64xx_pd_pwr_off(ctrlbit))
+		if (s3c64xx_pd_pwr_off(statbit))
 			return -ETIME;
 	}
 	return 0;
@@ -233,7 +240,7 @@ static int s3c64xx_pd_is_enabled(struct regulator_dev *dev)
 {
 	struct s3c64xx_pd_data *data = rdev_get_drvdata(dev);
 
-	return (__raw_readl(S3C64XX_BLK_PWR_STAT) & data->ctrlbit) ? 1 : 0;
+	return (__raw_readl(S3C64XX_BLK_PWR_STAT) & data->statbit) ? 1 : 0;
 }
 
 static int s3c64xx_pd_enable(struct regulator_dev *dev)
@@ -241,7 +248,7 @@ static int s3c64xx_pd_enable(struct regulator_dev *dev)
 	struct s3c64xx_pd_data *data = rdev_get_drvdata(dev);
 	int ret;
 
-	ret = s3c64xx_pd_ctrl(data->ctrlbit, 1);
+	ret = s3c64xx_pd_ctrl(data->ctrlbit, data->statbit, 1);
 	if (ret < 0) {
 		printk(KERN_ERR "failed to enable power domain\n");
 		return ret;
@@ -255,7 +262,7 @@ static int s3c64xx_pd_disable(struct regulator_dev *dev)
 	struct s3c64xx_pd_data *data = rdev_get_drvdata(dev);
 	int ret;
 
-	ret = s3c64xx_pd_ctrl(data->ctrlbit, 0);
+	ret = s3c64xx_pd_ctrl(data->ctrlbit, data->statbit, 0);
 	if (ret < 0) {
 		printk(KERN_ERR "faild to disable power domain\n");
 		return ret;
@@ -318,6 +325,7 @@ static int __devinit reg_s3c64xx_pd_probe(struct platform_device *pdev)
 	drvdata->microvolts = config->microvolts;
 
 	drvdata->ctrlbit = config->ctrlbit;
+	drvdata->statbit = config->statbit;
 
 	drvdata->dev = regulator_register(&drvdata->desc, &pdev->dev,
 					  config->init_data, drvdata);
