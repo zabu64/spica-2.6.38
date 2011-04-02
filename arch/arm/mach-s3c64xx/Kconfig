@@ -31,7 +31,8 @@ config S3C64XX_DMA
 
 config S3C64XX_DMA_ENGINE
 	bool "S3C64XX DMA (using generic PL08x DMA engine driver)"
-	depends on !S3C64XX_DMA
+	depends on !S3C64XX_DMA && EXPERIMENTAL
+	select DMADEVICES
 	select AMBA_PL08X
 
 config S3C64XX_SETUP_SDHCI
