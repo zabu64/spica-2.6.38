@@ -150,14 +150,24 @@ static void s3c64xx_dma_fill_lli(struct s3c2410_dma_chan *chan,
 	case S3C2410_DMASRC_HW:
 		src = chan->dev_addr;
 		dst = data;
-		control0 = PL080_CONTROL_SRC_AHB2;
+		if (chan->peripheral != DMACH_ONENAND)
+			control0 = PL080_CONTROL_SRC_AHB2;
+		else
+			control0 = PL080_CONTROL_SRC_INCR
+				 | (4 << PL080_CONTROL_DB_SIZE_SHIFT)
+				 | (4 << PL080_CONTROL_SB_SIZE_SHIFT);
 		control0 |= PL080_CONTROL_DST_INCR;
 		break;
 
 	case S3C2410_DMASRC_MEM:
 		src = data;
 		dst = chan->dev_addr;
-		control0 = PL080_CONTROL_DST_AHB2;
+		if (chan->peripheral != DMACH_ONENAND)
+			control0 = PL080_CONTROL_DST_AHB2;
+		else
+			control0 = PL080_CONTROL_DST_INCR
+				 | (4 << PL080_CONTROL_DB_SIZE_SHIFT)
+				 | (4 << PL080_CONTROL_SB_SIZE_SHIFT);
 		control0 |= PL080_CONTROL_SRC_INCR;
 		break;
 	default:
@@ -430,7 +440,10 @@ int s3c2410_dma_devconfig(unsigned int channel,
 	if (!chan)
 		return -EINVAL;
 
-	peripheral = (chan->peripheral & 0xf);
+	if (chan->peripheral == DMACH_ONENAND)
+		peripheral = S3C_DMA_ONENAND_PERI;
+	else
+		peripheral = (chan->peripheral & 0xf);
 	chan->source = source;
 	chan->dev_addr = devaddr;
 
@@ -438,11 +451,13 @@ int s3c2410_dma_devconfig(unsigned int channel,
 
 	switch (source) {
 	case S3C2410_DMASRC_HW:
-		config = 2 << PL080_CONFIG_FLOW_CONTROL_SHIFT;
+		if (peripheral != S3C_DMA_ONENAND_PERI) // Other than OneNAND read
+			config = 2 << PL080_CONFIG_FLOW_CONTROL_SHIFT;
 		config |= peripheral << PL080_CONFIG_SRC_SEL_SHIFT;
 		break;
 	case S3C2410_DMASRC_MEM:
-		config = 1 << PL080_CONFIG_FLOW_CONTROL_SHIFT;
+		if (peripheral != S3C_DMA_ONENAND_PERI) // Other than OneNAND write
+			config = 1 << PL080_CONFIG_FLOW_CONTROL_SHIFT;
 		config |= peripheral << PL080_CONFIG_DST_SEL_SHIFT;
 		break;
 	default:
@@ -745,6 +760,12 @@ static int __init s3c64xx_dma_init(void)
 	/* Register standard DMA controllers */
 	s3c64xx_dma_init1(0, DMACH_UART0, IRQ_DMA0, 0x75000000);
 	s3c64xx_dma_init1(8, DMACH_PCM1_TX, IRQ_DMA1, 0x75100000);
+
+#ifdef CONFIG_S3C64XX_DMA_ONENAND
+	/* OneNAND can only use channel 3 of DMAC0, so mark it as used permanently */
+	s3c2410_chans[S3C_DMA_ONENAND_CHNO].in_use = 1;
+	s3c2410_chans[S3C_DMA_ONENAND_CHNO].peripheral = DMACH_ONENAND;
+#endif
 
 	return 0;
 }

@@ -55,7 +55,10 @@ enum dma_ch {
 	DMACH_RES2,
 	DMACH_SECURITY_RX,	/* SDMA1 only */
 	DMACH_SECURITY_TX,	/* SDMA1 only */
-	DMACH_MAX		/* the end */
+	DMACH_MAX,		/* the end */
+
+	/* Special channels */
+	DMACH_ONENAND = 64
 };
 
 static __inline__ bool s3c_dma_has_circular(void)
@@ -121,6 +124,11 @@ struct s3c2410_dma_chan {
 	 * first.
 	 */
 };
+
+/* Special definitions for OneNAND DMA support */
+#define S3C_DMA_ONENAND_CHNO	(3)
+#define S3C_DMA_ONENAND_CH	(S3C_DMA_ONENAND_CHNO | DMACH_LOW_LEVEL)
+#define S3C_DMA_ONENAND_PERI	(0x10)
 
 #include <plat/dma-core.h>
 

@@ -15,6 +15,7 @@
 #include <linux/platform_device.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/onenand.h>
+#include <linux/dma-mapping.h>
 
 #include <mach/irqs.h>
 #include <mach/map.h>
@@ -37,11 +38,17 @@ static struct resource s3c_onenand_resources[] = {
 	},
 };
 
+static u64 s3c_onenand_dmamask = DMA_BIT_MASK(32);
+
 struct platform_device s3c_device_onenand = {
 	.name		= "samsung-onenand",
 	.id		= 0,
 	.num_resources	= ARRAY_SIZE(s3c_onenand_resources),
 	.resource	= s3c_onenand_resources,
+	.dev = {
+		.dma_mask = &s3c_onenand_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 
 void s3c_onenand_set_platdata(struct onenand_platform_data *pdata)

@@ -26,6 +26,7 @@
 
 #include <asm/mach/flash.h>
 #include <plat/regs-onenand.h>
+#include <mach/dma.h>
 
 #include <linux/io.h>
 
@@ -137,9 +138,11 @@ struct s3c_onenand {
 	void __iomem	*base;
 	struct resource *base_res;
 	void __iomem	*ahb_addr;
+	dma_addr_t	ahb_phys;
 	struct resource *ahb_res;
 	int		bootram_command;
 	void __iomem	*page_buf;
+	dma_addr_t	page_buf_dma;
 	void __iomem	*oob_buf;
 	unsigned int	(*mem_addr)(int fba, int fpa, int fsa);
 	unsigned int	(*cmd_map)(unsigned int type, unsigned int val);
@@ -150,6 +153,7 @@ struct s3c_onenand {
 #ifdef CONFIG_MTD_PARTITIONS
 	struct mtd_partition *parts;
 #endif
+	enum s3c2410_dma_buffresult result;
 };
 
 #define CMD_MAP_00(dev, addr)		(dev->cmd_map(MAP_00, ((addr) << 1)))
@@ -502,6 +506,111 @@ static int s3c_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 
 	return 0;
 }
+
+#ifdef CONFIG_S3C64XX_DMA_ONENAND
+static void s3c6410_onenand_buffdone(struct s3c2410_dma_chan *channel,
+				void *dev_id, int size,
+				enum s3c2410_dma_buffresult result)
+{
+	onenand->result = result;
+
+	if (!completion_done(&onenand->complete))
+		complete(&onenand->complete);
+}
+
+static int s3c6410_onenand_do_dma(unsigned int addr, unsigned int count,
+			unsigned int offset, enum dma_data_direction dir)
+{
+	enum s3c2410_dmasrc dmasrc;
+
+	onenand->result = S3C2410_RES_ERR;
+
+	dma_sync_single_for_device(&onenand->pdev->dev,
+					onenand->page_buf_dma, SZ_4K, dir);
+
+	dmasrc = S3C2410_DMASRC_MEM;
+	if (dir == DMA_FROM_DEVICE)
+		dmasrc = S3C2410_DMASRC_HW;
+
+	s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH, dmasrc,
+						onenand->ahb_phys + addr);
+
+	s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH, onenand,
+					onenand->page_buf_dma + offset, count);
+
+	s3c2410_dma_ctrl(S3C_DMA_ONENAND_CH, S3C2410_DMAOP_START);
+
+	if (!wait_for_completion_timeout(&onenand->complete,
+		msecs_to_jiffies(20)) || onenand->result != S3C2410_RES_OK)
+	{
+		return -EBADMSG;
+	}
+
+	dma_sync_single_for_cpu(&onenand->pdev->dev,
+					onenand->page_buf_dma, SZ_4K, dir);
+
+	return 0;
+}
+
+static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
+			       size_t len)
+{
+	struct onenand_chip *this = mtd->priv;
+	unsigned int m = 0;
+	int fba, fpa, fsa = 0;
+	unsigned int mem_addr, cmd_map_01;
+	int mcount;
+	int index;
+
+	switch (cmd) {
+		case ONENAND_CMD_READ:
+		case ONENAND_CMD_PROG:
+			break;
+		default:
+			return s3c_onenand_command(mtd, cmd, addr, len);
+	}
+
+	fba = (int) (addr >> this->erase_shift);
+	fpa = (int) (addr >> this->page_shift);
+	fpa &= this->page_mask;
+
+	mem_addr = onenand->mem_addr(fba, fpa, fsa);
+	cmd_map_01 = CMD_MAP_01(onenand, mem_addr);
+
+	switch (cmd) {
+	case ONENAND_CMD_READ:
+	case ONENAND_CMD_READOOB:
+		ONENAND_SET_NEXT_BUFFERRAM(this);
+	default:
+		break;
+	}
+
+	index = ONENAND_CURRENT_BUFFERRAM(this);
+
+	/*
+	 * Emulate Two BufferRAMs and access with 4 bytes pointer
+	 */
+	if (index)
+		m += this->writesize;
+
+	mcount = mtd->writesize;
+
+	switch (cmd) {
+	case ONENAND_CMD_READ:
+		/* Main */
+		return s3c6410_onenand_do_dma(cmd_map_01, mcount,
+							m, DMA_FROM_DEVICE);
+	case ONENAND_CMD_PROG:
+		/* Main */
+		return s3c6410_onenand_do_dma(cmd_map_01, mcount,
+							m, DMA_TO_DEVICE);
+	default:
+		break;
+	}
+
+	return 0;
+}
+#endif
 
 static unsigned char *s3c_get_bufferram(struct mtd_info *mtd, int area)
 {
@@ -860,7 +969,20 @@ static void s3c_onenand_setup(struct mtd_info *mtd)
 	this->wait = s3c_onenand_wait;
 	this->bbt_wait = s3c_onenand_bbt_wait;
 	this->unlock_all = s3c_unlock_all;
+
+#ifdef CONFIG_S3C64XX_DMA_ONENAND
+	if (onenand->type == TYPE_S3C6410) {
+		init_completion(&onenand->complete);
+		this->command = s3c6410_onenand_command;
+		s3c2410_dma_config(S3C_DMA_ONENAND_CH, 4);
+		s3c2410_dma_set_buffdone_fn(S3C_DMA_ONENAND_CH,
+						s3c6410_onenand_buffdone);
+	} else {
+		this->command = s3c_onenand_command;
+	}
+#else
 	this->command = s3c_onenand_command;
+#endif
 
 	this->read_bufferram = onenand_read_bufferram;
 	this->write_bufferram = onenand_write_bufferram;
@@ -942,6 +1064,7 @@ static int s3c_onenand_probe(struct platform_device *pdev)
 			goto ahb_resource_failed;
 		}
 
+		onenand->ahb_phys = r->start;
 		onenand->ahb_addr = ioremap(r->start, resource_size(r));
 		if (!onenand->ahb_addr) {
 			dev_err(&pdev->dev, "failed to map buffer memory resource\n");
@@ -950,7 +1073,8 @@ static int s3c_onenand_probe(struct platform_device *pdev)
 		}
 
 		/* Allocate 4KiB BufferRAM */
-		onenand->page_buf = kzalloc(SZ_4K, GFP_KERNEL);
+		onenand->page_buf = dma_alloc_coherent(&pdev->dev, SZ_4K,
+					&onenand->page_buf_dma, GFP_KERNEL);
 		if (!onenand->page_buf) {
 			err = -ENOMEM;
 			goto page_buf_fail;
@@ -1044,7 +1168,8 @@ dma_ioremap_failed:
 				   resource_size(onenand->dma_res));
 	kfree(onenand->oob_buf);
 oob_buf_fail:
-	kfree(onenand->page_buf);
+	dma_free_coherent(&pdev->dev, SZ_4K, onenand->page_buf,
+							onenand->page_buf_dma);
 page_buf_fail:
 	if (onenand->ahb_addr)
 		iounmap(onenand->ahb_addr);
@@ -1088,6 +1213,8 @@ static int __devexit s3c_onenand_remove(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, NULL);
 	kfree(onenand->oob_buf);
+	dma_free_coherent(&pdev->dev, SZ_4K, onenand->page_buf,
+							onenand->page_buf_dma);
 	kfree(onenand->page_buf);
 	kfree(onenand);
 	kfree(mtd);
