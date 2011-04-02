@@ -30,6 +30,7 @@ obj-$(CONFIG_CPU_FREQ_S3C64XX)  += cpufreq.o
 # DMA support
 
 obj-$(CONFIG_S3C64XX_DMA)	+= dma.o
+obj-$(CONFIG_S3C64XX_DMA_ENGINE) += dev-dma.o
 
 # Device setup
 

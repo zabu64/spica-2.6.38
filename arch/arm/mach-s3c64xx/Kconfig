@@ -29,6 +29,11 @@ config S3C64XX_DMA
 	bool "S3C64XX DMA"
 	select S3C_DMA
 
+config S3C64XX_DMA_ENGINE
+	bool "S3C64XX DMA (using generic PL08x DMA engine driver)"
+	depends on !S3C64XX_DMA
+	select AMBA_PL08X
+
 config S3C64XX_SETUP_SDHCI
 	select S3C64XX_SETUP_SDHCI_GPIO
 	bool
