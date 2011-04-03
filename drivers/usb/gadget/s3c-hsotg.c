@@ -3509,9 +3509,18 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 
 	our_hsotg = hsotg;
 
-	hsotg->enabled = 1;
-	udc_disable(hsotg);
+	/* Signal soft disconnect before disabling the UDC block */
+	__orr32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
+	/* must be at-least 3ms to allow bus to see disconnect */
+	msleep(3);
 
+	s3c_hsotg_otgdisable(hsotg);
+	s3c_hsotg_gate(hsotg->pdev, 0);
+
+	/* disable the controller for now */
+	clk_disable(hsotg->clk);
+
+	/* setup the interrupt */
 	ret = request_irq(ret, s3c_hsotg_irq, 0, dev_name(dev), hsotg);
 	if (ret < 0) {
 		dev_err(dev, "cannot claim IRQ\n");
