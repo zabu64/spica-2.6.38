@@ -59,6 +59,16 @@ static struct regulator_consumer_supply s3c64xx_domain_f_supply[] = {
 	REGULATOR_SUPPLY("pd", "s3c-fb"),
 };
 
+static struct regulator_consumer_supply s3c64xx_domain_s_supply[] = {
+	REGULATOR_SUPPLY("pd", "s3c-sdma.0"),
+	REGULATOR_SUPPLY("pd", "s3c-sdma.1"),
+	REGULATOR_SUPPLY("pd", "s3c-sec"),
+};
+
+static struct regulator_consumer_supply s3c64xx_domain_etm_supply[] = {
+	REGULATOR_SUPPLY("pd", "s3c-etm"),
+};
+
 static struct regulator_init_data s3c64xx_domain_g_data = {
 	.constraints = {
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
@@ -102,6 +112,24 @@ static struct regulator_init_data s3c64xx_domain_f_data = {
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(s3c64xx_domain_f_supply),
 	.consumer_supplies	= s3c64xx_domain_f_supply,
+};
+
+static struct regulator_init_data s3c64xx_domain_s_data = {
+	.constraints = {
+		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
+		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(s3c64xx_domain_s_supply),
+	.consumer_supplies	= s3c64xx_domain_s_supply,
+};
+
+static struct regulator_init_data s3c64xx_domain_etm_data = {
+	.constraints = {
+		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
+		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(s3c64xx_domain_etm_supply),
+	.consumer_supplies	= s3c64xx_domain_etm_supply,
 };
 
 struct s3c64xx_pd_config {
@@ -152,6 +180,22 @@ static struct s3c64xx_pd_config s3c64xx_domain_f_pdata = {
 	.statbit = S3C64XX_BLKPWRSTAT_F,
 };
 
+static struct s3c64xx_pd_config s3c64xx_domain_s_pdata = {
+	.supply_name = "domain_s",
+	.microvolts = 5000000,
+	.init_data = &s3c64xx_domain_s_data,
+	.ctrlbit = S3C64XX_NORMALCFG_DOMAIN_S_ON,
+	.statbit = S3C64XX_BLKPWRSTAT_S,
+};
+
+static struct s3c64xx_pd_config s3c64xx_domain_etm_pdata = {
+	.supply_name = "domain_etm",
+	.microvolts = 5000000,
+	.init_data = &s3c64xx_domain_etm_data,
+	.ctrlbit = S3C64XX_NORMALCFG_DOMAIN_ETM_ON,
+	.statbit = S3C64XX_BLKPWRSTAT_ETM,
+};
+
 struct platform_device s3c64xx_domain_g = {
 	.name          = "reg-s3c64xx-pd",
 	.id            = 0,
@@ -189,6 +233,22 @@ struct platform_device s3c64xx_domain_f = {
 	.id            = 4,
 	.dev = {
 		.platform_data = &s3c64xx_domain_f_pdata,
+	},
+};
+
+struct platform_device s3c64xx_domain_s = {
+	.name          = "reg-s3c64xx-pd",
+	.id            = 5,
+	.dev = {
+		.platform_data = &s3c64xx_domain_s_pdata,
+	},
+};
+
+struct platform_device s3c64xx_domain_etm = {
+	.name          = "reg-s3c64xx-pd",
+	.id            = 6,
+	.dev = {
+		.platform_data = &s3c64xx_domain_etm_pdata,
 	},
 };
 
@@ -375,6 +435,8 @@ static struct platform_device *s3c64xx_domains[] = {
 	&s3c64xx_domain_i,
 	&s3c64xx_domain_p,
 	&s3c64xx_domain_f,
+	&s3c64xx_domain_s,
+	&s3c64xx_domain_etm,
 };
 
 static int __init regulator_s3c64xx_pd_init(void)
