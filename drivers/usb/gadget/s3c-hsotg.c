@@ -2368,7 +2368,7 @@ static int s3c_hsotg_ep_disable(struct usb_ep *ep)
 	u32 epctrl_reg;
 	u32 ctrl;
 
-	dev_info(hsotg->dev, "%s(ep %p)\n", __func__, ep);
+	dev_dbg(hsotg->dev, "%s(ep %p)\n", __func__, ep);
 
 	if (ep == &hsotg->eps[0].ep) {
 		dev_err(hsotg->dev, "%s: called for ep0\n", __func__);
@@ -2863,8 +2863,9 @@ static void s3c_hsotg_init(struct s3c_hsotg *hsotg)
 		 hsotg->dedicated_fifos ? "dedicated" : "shared");
 }
 
-static void s3c_hsotg_dump(struct s3c_hsotg *hsotg)
+static inline void s3c_hsotg_dump(struct s3c_hsotg *hsotg)
 {
+#ifdef DEBUG
 	struct device *dev = hsotg->dev;
 	void __iomem *regs = hsotg->regs;
 	u32 val;
@@ -2907,6 +2908,7 @@ static void s3c_hsotg_dump(struct s3c_hsotg *hsotg)
 
 	dev_info(dev, "DVBUSDIS=0x%08x, DVBUSPULSE=%08x\n",
 		 readl(regs + S3C_DVBUSDIS), readl(regs + S3C_DVBUSPULSE));
+#endif
 }
 
 static void s3c_hsotg_gate(struct platform_device *pdev, bool on);
