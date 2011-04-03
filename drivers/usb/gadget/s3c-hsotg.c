@@ -24,6 +24,7 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
+#include <linux/regulator/consumer.h>
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -154,6 +155,8 @@ struct s3c_hsotg {
 	struct resource		*regs_res;
 	int			irq;
 	struct clk		*clk;
+	struct regulator	*reg_core;
+	struct regulator	*reg_io;
 
 	unsigned int		dedicated_fifos:1;
 	unsigned int		vbus_sensed:1;
@@ -2923,6 +2926,11 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 
 	dev_info(hsotg->dev, "Enabling HSOTG.");
 
+	if (hsotg->reg_core)
+		regulator_enable(hsotg->reg_core);
+	if (hsotg->reg_io)
+		regulator_enable(hsotg->reg_io);
+
 	clk_enable(hsotg->clk);
 
 	s3c_hsotg_gate(hsotg->pdev, 1);
@@ -3073,6 +3081,11 @@ static void udc_disable(struct s3c_hsotg *hsotg)
 	s3c_hsotg_otgdisable(hsotg);
 	s3c_hsotg_gate(hsotg->pdev, 0);
 	clk_disable(hsotg->clk);
+
+	if (hsotg->reg_io)
+		regulator_disable(hsotg->reg_io);
+	if (hsotg->reg_core)
+		regulator_disable(hsotg->reg_core);
 
 	hsotg->enabled = 0;
 }
@@ -3509,6 +3522,24 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 
 	our_hsotg = hsotg;
 
+	/* get the regulators if available */
+	hsotg->reg_core = regulator_get(dev, "otg-core");
+	if (IS_ERR(hsotg->reg_core))
+		hsotg->reg_core = 0;
+
+	hsotg->reg_io = regulator_get(dev, "otg-io");
+	if (IS_ERR(hsotg->reg_io))
+		hsotg->reg_io = 0;
+
+	/* enable the controller temporarily (the clock is already enabled) */
+	if (hsotg->reg_core)
+		regulator_enable(hsotg->reg_core);
+	if (hsotg->reg_io)
+		regulator_enable(hsotg->reg_io);
+
+	/* wait for the hardware to get ready */
+	msleep(1);
+
 	/* Signal soft disconnect before disabling the UDC block */
 	__orr32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
 	/* must be at-least 3ms to allow bus to see disconnect */
@@ -3519,6 +3550,10 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 
 	/* disable the controller for now */
 	clk_disable(hsotg->clk);
+	if (hsotg->reg_io)
+		regulator_disable(hsotg->reg_io);
+	if (hsotg->reg_core)
+		regulator_enable(hsotg->reg_core);
 
 	/* setup the interrupt */
 	ret = request_irq(ret, s3c_hsotg_irq, 0, dev_name(dev), hsotg);
