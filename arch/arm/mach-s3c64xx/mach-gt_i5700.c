@@ -378,7 +378,7 @@ static struct regulator_init_data spica_ldo4_data = {
 };
 
 static struct regulator_consumer_supply ldo5_consumer[] = {
-	{	.supply = "tf_vdd3", },
+	REGULATOR_SUPPLY("vmmc", "s3c-sdhci.0")
 };
 
 static struct regulator_init_data spica_ldo5_data = {
@@ -773,20 +773,12 @@ static struct platform_device spica_s6d05a = {
  * SDHCI platform data
  */
 
-static struct regulator *spica_tf_regulator;
-
 static irqreturn_t spica_tf_cd_thread(int irq, void *dev_id)
 {
 	void (*notify_func)(struct platform_device *, int state) = dev_id;
 	int status = gpio_get_value(GPIO_TF_DETECT);
 
-	if (!status)
-		regulator_enable(spica_tf_regulator);
-
 	notify_func(&s3c_device_hsmmc0, !status);
-
-	if (status)
-		regulator_disable(spica_tf_regulator);
 
 	return IRQ_HANDLED;
 }
@@ -804,10 +796,6 @@ static int spica_tf_cd_init(void (*notify_func)(struct platform_device *,
 	if (ret)
 		return ret;
 
-	spica_tf_regulator = regulator_get(&s3c_device_hsmmc0.dev, "tf_vdd3");
-	if (IS_ERR(spica_tf_regulator))
-		return PTR_ERR(spica_tf_regulator);
-
 	ret = request_threaded_irq(gpio_to_irq(GPIO_TF_DETECT), NULL,
 		spica_tf_cd_thread, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 		"TF card detect", notify_func);
@@ -815,10 +803,6 @@ static int spica_tf_cd_init(void (*notify_func)(struct platform_device *,
 		return ret;
 
 	status = gpio_get_value(GPIO_TF_DETECT);
-	if (status)
-		regulator_disable(spica_tf_regulator);
-	else
-		regulator_enable(spica_tf_regulator);
 	notify_func(&s3c_device_hsmmc0, !status);
 
 	return 0;
@@ -828,7 +812,6 @@ static int spica_tf_cd_cleanup(void (*notify_func)(struct platform_device *,
 								int state))
 {
 	free_irq(gpio_to_irq(GPIO_TF_DETECT), notify_func);
-	regulator_disable(spica_tf_regulator);
 	gpio_free(GPIO_TF_DETECT);
 
 	return 0;
