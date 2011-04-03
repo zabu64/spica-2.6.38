@@ -343,7 +343,7 @@ static struct regulator_init_data spica_ldo2_data = {
 };
 
 static struct regulator_consumer_supply ldo3_consumer[] = {
-	REGULATOR_SUPPLY("pd_io", "s3c-usbgadget")
+	REGULATOR_SUPPLY("otg-io", "s3c-hsotg")
 };
 
 static struct regulator_init_data spica_ldo3_data = {
@@ -438,7 +438,7 @@ static struct regulator_init_data spica_ldo7_data = {
 };
 
 static struct regulator_consumer_supply ldo8_consumer[] = {
-	REGULATOR_SUPPLY("pd_core", "s3c-usbgadget")
+	REGULATOR_SUPPLY("otg-core", "s3c-hsotg")
 };
 
 static struct regulator_init_data spica_ldo8_data = {
