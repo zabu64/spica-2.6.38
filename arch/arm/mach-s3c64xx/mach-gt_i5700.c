@@ -1304,6 +1304,8 @@ static void __init spica_machine_init(void)
 	/* Register PMEM devices */
 	spica_add_mem_devices();
 #endif
+
+	regulator_has_full_constraints();
 }
 
 /*
