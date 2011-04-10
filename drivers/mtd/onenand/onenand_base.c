@@ -1221,12 +1221,18 @@ static int onenand_read_ops_nolock(struct mtd_info *mtd, loff_t from,
  	/* Do first load to bufferRAM */
  	if (read < len) {
  		if (!onenand_check_bufferram(mtd, from)) {
+			/* Prepare pipelined read in controllers which support it */
+			if (this->prefetch)
+				this->prefetch(mtd, ONENAND_CMD_READ, from, len);
 			this->command(mtd, ONENAND_CMD_READ, from, writesize);
  			ret = this->wait(mtd, FL_READING);
  			onenand_update_bufferram(mtd, from, !ret);
 			if (ret == -EBADMSG)
 				ret = 0;
- 		}
+		} else if (this->prefetch && len > writesize) {
+			/* Prepare pipelined read in controllers which support it */
+			this->prefetch(mtd, ONENAND_CMD_READ, from + writesize, len - writesize);
+		}
  	}
 
 	thislen = min_t(int, writesize, len - read);
@@ -1357,6 +1363,10 @@ static int onenand_read_oob_nolock(struct mtd_info *mtd, loff_t from,
 	stats = mtd->ecc_stats;
 
 	readcmd = ONENAND_IS_4KB_PAGE(this) ? ONENAND_CMD_READ : ONENAND_CMD_READOOB;
+
+	/* Prepare pipelined read in controllers which support it */
+	if (this->prefetch)
+		this->prefetch(mtd, readcmd, from, len);
 
 	while (read < len) {
 		cond_resched();
@@ -1886,6 +1896,10 @@ static int onenand_write_ops_nolock(struct mtd_info *mtd, loff_t to,
 
 	column = to & (mtd->writesize - 1);
 
+	/* Prepare pipelined write in controllers which support it */
+	if (this->prefetch)
+		this->prefetch(mtd, ONENAND_CMD_PROG, to, len);
+
 	/* Loop until all data write */
 	while (1) {
 		if (written < len) {
@@ -2085,6 +2099,10 @@ static int onenand_write_oob_nolock(struct mtd_info *mtd, loff_t to,
 	oobbuf = this->oob_buf;
 
 	oobcmd = ONENAND_IS_4KB_PAGE(this) ? ONENAND_CMD_PROG : ONENAND_CMD_PROGOOB;
+
+	/* Prepare pipelined write in controllers which support it */
+	if (this->prefetch)
+		this->prefetch(mtd, oobcmd, to, len);
 
 	/* Loop until all data write */
 	while (written < len) {

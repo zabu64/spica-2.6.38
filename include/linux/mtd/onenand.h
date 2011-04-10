@@ -120,6 +120,7 @@ struct onenand_chip {
 	int (*scan_bbt)(struct mtd_info *mtd);
 	int (*enable)(struct mtd_info *mtd);
 	int (*disable)(struct mtd_info *mtd);
+	void (*prefetch)(struct mtd_info *mtd, int cmd, loff_t address, size_t len);
 
 	struct completion	complete;
 	int			irq;

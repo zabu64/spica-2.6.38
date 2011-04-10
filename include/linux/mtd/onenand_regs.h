@@ -143,6 +143,8 @@
 /* NOTE: Those are not *REAL* commands */
 #define ONENAND_CMD_BUFFERRAM		(0x1978)
 #define FLEXONENAND_CMD_READ_PI		(0x1985)
+#define ONENAND_CMD_PIPELINED_READ	(0x4000)
+#define ONENAND_CMD_PIPELINED_WRITE	(0x4100)
 
 /*
  * System Configuration 1 Register F221h (R, R/W)
