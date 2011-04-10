@@ -217,6 +217,14 @@ config MTD_BLOCK
 	  You do not need this option for use with the DiskOnChip devices. For
 	  those, enable NFTL support (CONFIG_NFTL) instead.
 
+config MTD_BLOCK_4K
+	bool "Use 4KiB block size for MTD block devices"
+	depends on MTD_BLOCK
+	default n
+	---help---
+	  Some devices may perform better with bigger block sizes. Use this
+	  option to set block size of MTD block driver to 4KiB.
+
 config MTD_BLOCK_RO
 	tristate "Readonly block device access to MTD devices"
 	depends on MTD_BLOCK!=y && BLOCK

@@ -33,6 +33,13 @@
 #include <linux/mtd/blktrans.h>
 #include <linux/mutex.h>
 
+#ifdef CONFIG_MTD_BLOCK_4K
+#define MTD_BLOCK_SHIFT	(12)
+#else
+#define MTD_BLOCK_SHIFT	(9)
+#endif
+
+#define MTD_BLOCK_SIZE	(1 << MTD_BLOCK_SHIFT)
 
 struct mtdblk_dev {
 	struct mtd_blktrans_dev mbd;
@@ -260,7 +267,7 @@ static int mtdblock_readsect(struct mtd_blktrans_dev *dev,
 			      unsigned long block, char *buf)
 {
 	struct mtdblk_dev *mtdblk = container_of(dev, struct mtdblk_dev, mbd);
-	return do_cached_read(mtdblk, block<<9, 512, buf);
+	return do_cached_read(mtdblk, block<<MTD_BLOCK_SHIFT, MTD_BLOCK_SIZE, buf);
 }
 
 static int mtdblock_writesect(struct mtd_blktrans_dev *dev,
@@ -276,7 +283,7 @@ static int mtdblock_writesect(struct mtd_blktrans_dev *dev,
 		 * return -EAGAIN sometimes, but why bother?
 		 */
 	}
-	return do_cached_write(mtdblk, block<<9, 512, buf);
+	return do_cached_write(mtdblk, block<<MTD_BLOCK_SHIFT, MTD_BLOCK_SIZE, buf);
 }
 
 static int mtdblock_open(struct mtd_blktrans_dev *mbd)
@@ -357,7 +364,7 @@ static void mtdblock_add_mtd(struct mtd_blktrans_ops *tr, struct mtd_info *mtd)
 	dev->mbd.mtd = mtd;
 	dev->mbd.devnum = mtd->index;
 
-	dev->mbd.size = mtd->size >> 9;
+	dev->mbd.size = mtd->size >> MTD_BLOCK_SHIFT;
 	dev->mbd.tr = tr;
 
 	if (!(mtd->flags & MTD_WRITEABLE))
@@ -376,7 +383,7 @@ static struct mtd_blktrans_ops mtdblock_tr = {
 	.name		= "mtdblock",
 	.major		= 31,
 	.part_bits	= 0,
-	.blksize 	= 512,
+	.blksize 	= MTD_BLOCK_SIZE,
 	.open		= mtdblock_open,
 	.flush		= mtdblock_flush,
 	.release	= mtdblock_release,
