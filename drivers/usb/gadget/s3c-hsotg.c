@@ -3056,6 +3056,8 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 	/* remove the soft-disconnect and let's go */
 	__bic32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
 
+	enable_irq(hsotg->irq);
+
 	s3c_hsotg_dump(hsotg);
 
 	hsotg->enabled = 1;
@@ -3069,6 +3071,9 @@ static void udc_disable(struct s3c_hsotg *hsotg)
 		return;
 
 	dev_info(hsotg->dev, "Disabling HSOTG.");
+
+	/* Disable IRQ and make sure that the handler is not running */
+	disable_irq(hsotg->irq);
 
 	/* Signal soft disconnect before disabling the UDC block */
 	__orr32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
@@ -3563,6 +3568,8 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 		dev_err(dev, "cannot claim IRQ\n");
 		goto err_regs;
 	}
+
+	disable_irq(hsotg->irq);
 
 	return 0;
 
