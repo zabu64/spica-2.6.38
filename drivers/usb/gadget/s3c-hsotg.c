@@ -3563,7 +3563,7 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 		regulator_enable(hsotg->reg_core);
 
 	/* setup the interrupt */
-	ret = request_irq(ret, s3c_hsotg_irq, 0, dev_name(dev), hsotg);
+	ret = request_irq(hsotg->irq, s3c_hsotg_irq, 0, dev_name(dev), hsotg);
 	if (ret < 0) {
 		dev_err(dev, "cannot claim IRQ\n");
 		goto err_regs;
