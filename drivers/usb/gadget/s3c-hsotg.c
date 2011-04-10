@@ -3547,6 +3547,9 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 	/* wait for the hardware to get ready */
 	msleep(1);
 
+	/* core soft reset */
+	s3c_hsotg_corereset(hsotg);
+
 	/* Signal soft disconnect before disabling the UDC block */
 	__orr32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
 	/* must be at-least 3ms to allow bus to see disconnect */
