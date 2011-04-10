@@ -316,7 +316,7 @@ static void s3c_hsotg_ctrl_epint(struct s3c_hsotg *hsotg,
  * s3c_hsotg_init_fifo - initialise non-periodic FIFOs
  * @hsotg: The device instance.
  */
-static void s3c_hsotg_init_fifo(struct s3c_hsotg *hsotg)
+static int s3c_hsotg_init_fifo(struct s3c_hsotg *hsotg)
 {
 	unsigned int ep;
 	unsigned int addr;
@@ -376,12 +376,14 @@ static void s3c_hsotg_init_fifo(struct s3c_hsotg *hsotg)
 			dev_err(hsotg->dev,
 				"%s: timeout flushing fifos (GRSTCTL=%08x)\n",
 				__func__, val);
+			return -ETIMEDOUT;
 		}
 
 		udelay(1);
 	}
 
 	dev_dbg(hsotg->dev, "FIFOs reset, timeout at %d\n", timeout);
+	return 0;
 }
 
 /**
