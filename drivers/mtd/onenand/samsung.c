@@ -131,6 +131,11 @@ enum soc_type {
 #define S5PC110_DMA_DIR_READ		0x0
 #define S5PC110_DMA_DIR_WRITE		0x1
 
+struct s3c_onenand_transfer {
+	dma_addr_t	addr;
+	size_t		size;
+};
+
 struct s3c_onenand {
 	struct mtd_info	*mtd;
 	struct platform_device	*pdev;
@@ -144,6 +149,9 @@ struct s3c_onenand {
 	void __iomem	*page_buf;
 	dma_addr_t	page_buf_dma;
 	void __iomem	*oob_buf;
+	dma_addr_t	oob_buf_dma;
+	void __iomem	*dummy_buf;
+	dma_addr_t	dummy_buf_dma;
 	unsigned int	(*mem_addr)(int fba, int fpa, int fsa);
 	unsigned int	(*cmd_map)(unsigned int type, unsigned int val);
 	void __iomem	*dma_addr;
@@ -153,7 +161,8 @@ struct s3c_onenand {
 #ifdef CONFIG_MTD_PARTITIONS
 	struct mtd_partition *parts;
 #endif
-	enum s3c2410_dma_buffresult result;
+	volatile enum s3c2410_dma_buffresult result;
+	struct s3c_onenand_transfer pending_transfer;
 };
 
 #define CMD_MAP_00(dev, addr)		(dev->cmd_map(MAP_00, ((addr) << 1)))
@@ -512,62 +521,44 @@ static void s3c6410_onenand_buffdone(struct s3c2410_dma_chan *channel,
 				void *dev_id, int size,
 				enum s3c2410_dma_buffresult result)
 {
-	onenand->result = result;
-
-	if (!completion_done(&onenand->complete))
-		complete(&onenand->complete);
-}
-
-static int s3c6410_onenand_do_dma(unsigned int addr, unsigned int count,
-			unsigned int offset, enum dma_data_direction dir)
-{
-	enum s3c2410_dmasrc dmasrc;
-
-	onenand->result = S3C2410_RES_ERR;
-
-	dma_sync_single_for_device(&onenand->pdev->dev,
-					onenand->page_buf_dma, SZ_4K, dir);
-
-	dmasrc = S3C2410_DMASRC_MEM;
-	if (dir == DMA_FROM_DEVICE)
-		dmasrc = S3C2410_DMASRC_HW;
-
-	s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH, dmasrc,
-						onenand->ahb_phys + addr);
-
-	s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH, onenand,
-					onenand->page_buf_dma + offset, count);
-
-	s3c2410_dma_ctrl(S3C_DMA_ONENAND_CH, S3C2410_DMAOP_START);
-
-	if (!wait_for_completion_timeout(&onenand->complete,
-		msecs_to_jiffies(20)) || onenand->result != S3C2410_RES_OK)
-	{
-		return -EBADMSG;
+	if (dev_id) {
+		struct s3c_onenand_transfer *oob = dev_id;
+		onenand->result = result;
+		s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH, 0,
+							oob->addr, oob->size);
+		s3c2410_dma_ctrl(S3C_DMA_ONENAND_CH, S3C2410_DMAOP_START);
+		return;
 	}
 
-	dma_sync_single_for_cpu(&onenand->pdev->dev,
-					onenand->page_buf_dma, SZ_4K, dir);
+	if (onenand->result == S3C2410_RES_OK)
+		onenand->result = result;
 
-	return 0;
+	complete(&onenand->complete);
 }
 
 static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 			       size_t len)
 {
 	struct onenand_chip *this = mtd->priv;
-	unsigned int m = 0;
+	unsigned int m = 0, s = 0;
 	int fba, fpa, fsa = 0;
 	unsigned int mem_addr, cmd_map_01;
-	int mcount;
-	int index;
+	int mcount, scount;
+	int index, ret;
+
+	init_completion(&onenand->complete);
+	onenand->result = S3C2410_RES_OK;
 
 	switch (cmd) {
 		case ONENAND_CMD_READ:
+		case ONENAND_CMD_READOOB:
 		case ONENAND_CMD_PROG:
+		case ONENAND_CMD_PROGOOB:
 			break;
 		default:
-			return s3c_onenand_command(mtd, cmd, addr, len);
+			ret = s3c_onenand_command(mtd, cmd, addr, len);
+			complete(&onenand->complete);
+			return ret;
 	}
 
 	fba = (int) (addr >> this->erase_shift);
@@ -590,22 +581,142 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 	/*
 	 * Emulate Two BufferRAMs and access with 4 bytes pointer
 	 */
-	if (index)
+	if (index) {
 		m += this->writesize;
+		s += mtd->oobsize;
+	}
 
 	mcount = mtd->writesize;
+	scount = mtd->oobsize;
 
 	switch (cmd) {
 	case ONENAND_CMD_READ:
-		/* Main */
-		return s3c6410_onenand_do_dma(cmd_map_01, mcount,
-							m, DMA_FROM_DEVICE);
-	case ONENAND_CMD_PROG:
-		/* Main */
-		return s3c6410_onenand_do_dma(cmd_map_01, mcount,
-							m, DMA_TO_DEVICE);
-	default:
+		s3c_write_reg(0, TRANS_SPARE_OFFSET);
+		s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH,
+			S3C2410_DMASRC_HW, onenand->ahb_phys + cmd_map_01);
+		s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH, 0,
+					onenand->page_buf_dma + m, mcount);
 		break;
+
+	case ONENAND_CMD_READOOB:
+		s3c_write_reg(TSRF, TRANS_SPARE_OFFSET);
+		s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH,
+			S3C2410_DMASRC_HW, onenand->ahb_phys + cmd_map_01);
+		onenand->pending_transfer.addr = onenand->oob_buf_dma + s;
+		onenand->pending_transfer.size = scount;
+		s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH,
+					&onenand->pending_transfer,
+					onenand->page_buf_dma + m, mcount);
+		break;
+
+	case ONENAND_CMD_PROG:
+		s3c_write_reg(0, TRANS_SPARE_OFFSET);
+		s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH,
+			S3C2410_DMASRC_MEM, onenand->ahb_phys + cmd_map_01);
+		s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH, 0,
+					onenand->page_buf_dma + m, mcount);
+		break;
+
+	case ONENAND_CMD_PROGOOB:
+		s3c_write_reg(TSRF, TRANS_SPARE_OFFSET);
+		s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH,
+			S3C2410_DMASRC_MEM, onenand->ahb_phys + cmd_map_01);
+		onenand->pending_transfer.addr = onenand->oob_buf_dma + s;
+		onenand->pending_transfer.size = scount;
+		s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH,
+					&onenand->pending_transfer,
+					onenand->dummy_buf_dma, mcount);
+		break;
+
+	default:
+		BUG();
+	}
+
+	s3c2410_dma_ctrl(S3C_DMA_ONENAND_CH, S3C2410_DMAOP_START);
+	return 0;
+}
+
+static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
+{
+	struct device *dev = &onenand->pdev->dev;
+	unsigned int stat, ecc;
+
+	switch (state) {
+	case FL_READING:
+	case FL_WRITING:
+		break;
+	default:
+		return s3c_onenand_wait(mtd, state);
+	}
+
+	/* The 20 msec is enough */
+	if (!wait_for_completion_timeout(&onenand->complete,
+		msecs_to_jiffies(20)) || onenand->result != S3C2410_RES_OK)
+	{
+		dev_info(dev, "%s: DMA error\n", __func__);
+		s3c2410_dma_ctrl(S3C_DMA_ONENAND_CH, S3C2410_DMAOP_FLUSH);
+	}
+
+	/* Get interrupt status */
+	stat = s3c_read_reg(INT_ERR_STAT_OFFSET);
+	s3c_write_reg(stat, INT_ERR_ACK_OFFSET);
+
+	/*
+	 * In the Spec. it checks the controller status first
+	 * However if you get the correct information in case of
+	 * power off recovery (POR) test, it should read ECC status first
+	 */
+	if (stat & LOAD_CMP) {
+		ecc = s3c_read_reg(ECC_ERR_STAT_OFFSET);
+		if (ecc & ONENAND_ECC_4BIT_UNCORRECTABLE) {
+			dev_info(dev, "%s: ECC error = 0x%04x\n", __func__,
+				 ecc);
+			mtd->ecc_stats.failed++;
+			return -EBADMSG;
+		}
+	}
+
+	if (stat & (LOCKED_BLK | ERS_FAIL | PGM_FAIL | LD_FAIL_ECC_ERR)) {
+		dev_info(dev, "%s: controller error = 0x%04x\n", __func__,
+			 stat);
+		if (stat & LOCKED_BLK)
+			dev_info(dev, "%s: it's locked error = 0x%04x\n",
+				 __func__, stat);
+
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int s3c6410_onenand_bbt_wait(struct mtd_info *mtd, int state)
+{
+	struct device *dev = &onenand->pdev->dev;
+	unsigned int stat;
+
+	/* The 20 msec is enough */
+	if (!wait_for_completion_timeout(&onenand->complete,
+		msecs_to_jiffies(20)) || onenand->result != S3C2410_RES_OK)
+	{
+		dev_info(dev, "%s: DMA error\n", __func__);
+		s3c2410_dma_ctrl(S3C_DMA_ONENAND_CH, S3C2410_DMAOP_FLUSH);
+	}
+
+	/* Get interrupt status */
+	stat = s3c_read_reg(INT_ERR_STAT_OFFSET);
+	s3c_write_reg(stat, INT_ERR_ACK_OFFSET);
+
+	if (stat & LD_FAIL_ECC_ERR) {
+		s3c_onenand_reset();
+		return ONENAND_BBT_READ_ERROR;
+	}
+
+	if (stat & LOAD_CMP) {
+		int ecc = s3c_read_reg(ECC_ERR_STAT_OFFSET);
+		if (ecc & ONENAND_ECC_4BIT_UNCORRECTABLE) {
+			s3c_onenand_reset();
+			return ONENAND_BBT_READ_ERROR;
+		}
 	}
 
 	return 0;
@@ -974,6 +1085,8 @@ static void s3c_onenand_setup(struct mtd_info *mtd)
 	if (onenand->type == TYPE_S3C6410) {
 		init_completion(&onenand->complete);
 		this->command = s3c6410_onenand_command;
+		this->wait = s3c6410_onenand_wait;
+		this->bbt_wait = s3c6410_onenand_bbt_wait;
 		s3c2410_dma_config(S3C_DMA_ONENAND_CH, 4);
 		s3c2410_dma_set_buffdone_fn(S3C_DMA_ONENAND_CH,
 						s3c6410_onenand_buffdone);
@@ -1080,8 +1193,23 @@ static int s3c_onenand_probe(struct platform_device *pdev)
 			goto page_buf_fail;
 		}
 
+#ifdef CONFIG_S3C64XX_DMA_ONENAND
+		/* Allocate 4KiB buffer for dummy writes */
+		onenand->dummy_buf = dma_alloc_coherent(&pdev->dev, SZ_4K,
+					&onenand->dummy_buf_dma, GFP_KERNEL);
+		if (!onenand->dummy_buf) {
+			err = -ENOMEM;
+			goto dummy_buf_fail;
+		}
+		memset(onenand->dummy_buf, 0xff, SZ_4K);
+
+		/* Allocate 4KiB for SpareRAM (only 128 bytes are used) */
+		onenand->oob_buf = dma_alloc_coherent(&pdev->dev, SZ_4K,
+					&onenand->oob_buf_dma, GFP_KERNEL);
+#else
 		/* Allocate 128 SpareRAM */
 		onenand->oob_buf = kzalloc(128, GFP_KERNEL);
+#endif
 		if (!onenand->oob_buf) {
 			err = -ENOMEM;
 			goto oob_buf_fail;
@@ -1166,8 +1294,17 @@ dma_ioremap_failed:
 	if (onenand->dma_res)
 		release_mem_region(onenand->dma_res->start,
 				   resource_size(onenand->dma_res));
+#ifdef CONFIG_S3C64XX_DMA_ONENAND
+	dma_free_coherent(&pdev->dev, SZ_4K, onenand->oob_buf,
+							onenand->oob_buf_dma);
+oob_buf_fail:
+	dma_free_coherent(&pdev->dev, SZ_4K, onenand->dummy_buf,
+							onenand->dummy_buf_dma);
+dummy_buf_fail:
+#else
 	kfree(onenand->oob_buf);
 oob_buf_fail:
+#endif
 	dma_free_coherent(&pdev->dev, SZ_4K, onenand->page_buf,
 							onenand->page_buf_dma);
 page_buf_fail:
