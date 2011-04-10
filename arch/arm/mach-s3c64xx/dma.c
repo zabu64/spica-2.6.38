@@ -593,6 +593,7 @@ static irqreturn_t s3c64xx_dma_irq(int irq, void *pw)
 
 	for (offs = 0, bit = 1; offs < 8; offs++, bit <<= 1) {
 		struct s3c64xx_dma_buff *buff;
+		void *buff_pw;
 
 		if (!(errstat & bit) && !(tcstat & bit))
 			continue;
@@ -624,7 +625,7 @@ static irqreturn_t s3c64xx_dma_irq(int irq, void *pw)
 		if (buff == chan->next)
 			buff = chan->end;
 
-		s3c64xx_dma_bufffdone(chan, buff, res);
+		buff_pw = buff->pw;
 
 		/* Free the node and update curr, if non-circular queue */
 		if (!(chan->flags & S3C2410_DMAF_CIRCULAR)) {
@@ -641,6 +642,9 @@ static irqreturn_t s3c64xx_dma_irq(int irq, void *pw)
 		} else {
 			chan->next = buff->next;
 		}
+
+		if (chan->callback_fn != NULL)
+			(chan->callback_fn)(chan, buff_pw, 0, res);
 	}
 
 	return IRQ_HANDLED;
