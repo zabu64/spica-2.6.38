@@ -721,6 +721,48 @@ static int s3c6410_onenand_bbt_wait(struct mtd_info *mtd, int state)
 
 	return 0;
 }
+
+void s3c6410_onenand_prefetch(struct mtd_info *mtd, int cmd,
+						loff_t address, size_t len)
+{
+	struct onenand_chip *this = mtd->priv;
+	int fba, fpa, fsa = 0;
+	unsigned int mem_addr, cmd_map_10;
+	int pcount;
+
+	pcount = (len >> this->page_shift) & 0xff;
+
+	if (pcount < 2)
+		return;
+
+	fba = (int) (address >> this->erase_shift);
+	fpa = (int) (address >> this->page_shift);
+	fpa &= this->page_mask;
+
+	mem_addr = onenand->mem_addr(fba, fpa, fsa);
+	cmd_map_10 = CMD_MAP_10(onenand, mem_addr);
+
+	switch (cmd) {
+		case ONENAND_CMD_READ:
+			s3c_write_reg(0, TRANS_SPARE_OFFSET);
+			s3c_write_cmd(ONENAND_CMD_PIPELINED_READ | pcount, cmd_map_10);
+			break;
+		case ONENAND_CMD_READOOB:
+			s3c_write_reg(TSRF, TRANS_SPARE_OFFSET);
+			s3c_write_cmd(ONENAND_CMD_PIPELINED_READ | pcount, cmd_map_10);
+			break;
+		case ONENAND_CMD_PROG:
+			s3c_write_reg(0, TRANS_SPARE_OFFSET);
+			s3c_write_cmd(ONENAND_CMD_PIPELINED_WRITE | pcount, cmd_map_10);
+			break;
+		case ONENAND_CMD_PROGOOB:
+			s3c_write_reg(TSRF, TRANS_SPARE_OFFSET);
+			s3c_write_cmd(ONENAND_CMD_PIPELINED_WRITE | pcount, cmd_map_10);
+			break;
+		default:
+			return;
+	}
+}
 #endif
 
 static unsigned char *s3c_get_bufferram(struct mtd_info *mtd, int area)
@@ -1087,6 +1129,7 @@ static void s3c_onenand_setup(struct mtd_info *mtd)
 		this->command = s3c6410_onenand_command;
 		this->wait = s3c6410_onenand_wait;
 		this->bbt_wait = s3c6410_onenand_bbt_wait;
+		this->prefetch = s3c6410_onenand_prefetch;
 		s3c2410_dma_config(S3C_DMA_ONENAND_CH, 4);
 		s3c2410_dma_set_buffdone_fn(S3C_DMA_ONENAND_CH,
 						s3c6410_onenand_buffdone);
