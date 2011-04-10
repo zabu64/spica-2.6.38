@@ -154,8 +154,8 @@ static void s3c64xx_dma_fill_lli(struct s3c2410_dma_chan *chan,
 			control0 = PL080_CONTROL_SRC_AHB2;
 		else
 			control0 = PL080_CONTROL_SRC_INCR
-				 | (4 << PL080_CONTROL_DB_SIZE_SHIFT)
-				 | (4 << PL080_CONTROL_SB_SIZE_SHIFT);
+			| (PL080_BSIZE_4 << PL080_CONTROL_DB_SIZE_SHIFT)
+			| (PL080_BSIZE_4 << PL080_CONTROL_SB_SIZE_SHIFT);
 		control0 |= PL080_CONTROL_DST_INCR;
 		break;
 
@@ -166,8 +166,8 @@ static void s3c64xx_dma_fill_lli(struct s3c2410_dma_chan *chan,
 			control0 = PL080_CONTROL_DST_AHB2;
 		else
 			control0 = PL080_CONTROL_DST_INCR
-				 | (4 << PL080_CONTROL_DB_SIZE_SHIFT)
-				 | (4 << PL080_CONTROL_SB_SIZE_SHIFT);
+			| (PL080_BSIZE_4 << PL080_CONTROL_DB_SIZE_SHIFT)
+			| (PL080_BSIZE_4 << PL080_CONTROL_SB_SIZE_SHIFT);
 		control0 |= PL080_CONTROL_SRC_INCR;
 		break;
 	default:
