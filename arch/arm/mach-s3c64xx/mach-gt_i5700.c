@@ -956,61 +956,58 @@ static struct mtd_partition spica_onenand_parts[] = {
 	[0] = {
 		.name		= "pbl",
 		.size		= SZ_128K,
-		.offset		= 0,
+		.offset		= 0x00000000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
 	[1] = {
 		.name		= "sbl",
 		.size		= SZ_1M + SZ_256K,
-		.offset		= MTDPART_OFS_APPEND,
+		.offset		= 0x00020000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
 	[2] = {
 		.name		= "logo",
 		.size		= SZ_128K,
-		.offset		= MTDPART_OFS_APPEND,
+		.offset		= 0x00160000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
 	[3] = {
 		.name		= "param",
 		.size		= SZ_256K,
-		.offset		= MTDPART_OFS_APPEND,
+		.offset		= 0x00180000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
 	[4] = {
 		.name		= "kernel",
 		.size		= SZ_4M + SZ_1M,
-		.offset		= MTDPART_OFS_APPEND,
+		.offset		= 0x001c0000,
 	},
+	/* Following partitions are incompatible with legacy images */
 	[5] = {
 		.name		= "system",
-		.size		= SZ_128M + SZ_16M + SZ_4M + SZ_2M,
-		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_128M,
+		.offset		= 0x006c0000,
 	},
 	[6] = {
 		.name		= "data",
-		.size		= SZ_128M + SZ_64M + SZ_8M,
-		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_256M + SZ_32M + SZ_8M + SZ_4M + SZ_2M,
+		.offset		= 0x086c0000,
 	},
+	/* End of incompatible partitions */
 	[7] = {
-		.name		= "cache",
-		.size		= SZ_64M + SZ_16M + SZ_512K,
-		.offset		= MTDPART_OFS_APPEND,
-	},
-	[8] = {
 		.name		= "xbin",
 		.size		= SZ_32M + SZ_8M,
-		.offset		= MTDPART_OFS_APPEND,
+		.offset		= 0x1b540000,
 	},
-	[9] = {
+	[8] = {
 		.name		= "modem",
 		.size		= SZ_16M,
-		.offset		= MTDPART_OFS_APPEND,
+		.offset		= 0x1dd40000,
 	},
-	[10] = {
+	[9] = {
 		.name		= "efs",
 		.size		= SZ_8M,
-		.offset		= MTDPART_OFS_APPEND,
+		.offset		= 0x1ed40000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
 };
