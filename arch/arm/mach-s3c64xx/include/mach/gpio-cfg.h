@@ -119,4 +119,30 @@ struct s3c_gpio_config {
 */
 extern void s3c_init_gpio(struct s3c_gpio_config *table, unsigned int count);
 
+/*
+ * Handy macros for configuration table generation
+ */
+
+/* Alive variant */
+#define S3C_GPIO_ALIVE(name, func, level, pull, slp_mode, slp_pull)	\
+	{ GPIO_ ## name, S3C_GPIO_ ## func, GPIO_LEVEL_ ## level,		\
+		S3C_GPIO_PULL_ ## pull, S3C_GPIO_SLP_ ## slp_mode, 		\
+		S3C_GPIO_PULL_ ## slp_pull }
+
+/* Alive variant with function taken from platform definition (name_AF) */
+#define S3C_GPIO_ALIVE_EXT(name, level, pull, slp_mode, slp_pull)	\
+	{ GPIO_ ## name, GPIO_ ## name ## _AF, GPIO_LEVEL_ ## level,		\
+		S3C_GPIO_PULL_ ## pull, S3C_GPIO_SLP_ ## slp_mode, 		\
+		S3C_GPIO_PULL_ ## slp_pull }
+
+/* Off variant */
+#define S3C_GPIO_OFF(name, func, level, pull)				\
+	{ GPIO_ ## name, S3C_GPIO_ ## func, GPIO_LEVEL_ ## level,		\
+		S3C_GPIO_PULL_ ## pull }
+
+/* Off variant with function taken from platform definition (name_AF) */
+#define S3C_GPIO_OFF_EXT(name, level, pull)				\
+	{ GPIO_ ## name, GPIO_ ## name ## _AF, GPIO_LEVEL_ ## level,		\
+		S3C_GPIO_PULL_ ## pull }
+
 #endif /* __MACH_GPIO_CFG_H */
