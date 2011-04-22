@@ -2,7 +2,7 @@
  *	ADC-based battery driver for boards with Samsung SoCs.
  *	Copyright (c) Tomasz Figa
  *
- *	Based on samsung_batterytery.c by Vasily Khoruzhick
+ *	Based on s3c_adc_battery.c by Vasily Khoruzhick
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file COPYING in the main directory of this archive for
@@ -20,13 +20,13 @@
 #include <linux/jiffies.h>
 #include <linux/errno.h>
 #include <linux/init.h>
-#include <linux/hrtimer.h>
 #include <linux/slab.h>
+
 #include <linux/power/samsung_battery.h>
 
 #include <plat/adc.h>
 
-/* Time between samples (in miliseconds) */
+/* Time between samples (in milliseconds) */
 #define BAT_POLL_INTERVAL	10000
 #define BAT_POLL_INTERVAL_CHG	2000
 
