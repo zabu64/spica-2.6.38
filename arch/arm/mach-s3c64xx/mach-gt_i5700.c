@@ -1323,10 +1323,13 @@ static struct s3c_gpio_config spica_gpio_table[] = {
 static void __init spica_fixup(struct machine_desc *desc,
 		struct tag *tags, char **cmdline, struct meminfo *mi)
 {
-	mi->nr_banks = 1;
+	mi->nr_banks = 2;
 
 	mi->bank[0].start = PHYS_OFFSET;
-	mi->bank[0].size = PHYS_UNRESERVED_SIZE;
+	mi->bank[0].size = SZ_128M;
+
+	mi->bank[1].start = PHYS_OFFSET + SZ_128M;
+	mi->bank[1].size = PHYS_UNRESERVED_SIZE - SZ_128M;
 }
 
 static void __init spica_map_io(void)
