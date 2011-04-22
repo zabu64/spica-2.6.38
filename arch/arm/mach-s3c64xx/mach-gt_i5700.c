@@ -1,9 +1,6 @@
 /* linux/arch/arm/mach-s3c64xx/mach-gt_i5700.c
  *
- * Copyright 2008 Openmoko, Inc.
- * Copyright 2008 Simtec Electronics
- *	Ben Dooks <ben@simtec.co.uk>
- *	http://armlinux.simtec.co.uk/
+ * Copyright 2011 Tomasz Figa <tomasz.figa at gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
