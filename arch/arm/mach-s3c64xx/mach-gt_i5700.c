@@ -42,6 +42,8 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/onenand.h>
 #include <linux/mtd/partitions.h>
+#include <linux/power/samsung_battery.h>
+#include <linux/power/gpio-charger.h>
 
 #include <video/s6d05a.h>
 
@@ -1018,6 +1020,74 @@ static struct onenand_platform_data spica_onenand_pdata = {
 };
 
 /*
+ * Hardware monitoring (ADC)
+ */
+
+static char *spica_charger_supplicants[] = {
+	"samsung-battery",
+};
+
+static struct gpio_charger_platform_data spica_charger_pdata = {
+	.type			= POWER_SUPPLY_TYPE_MAINS,
+	.gpio			= GPIO_TA_CONNECTED_N,
+	.gpio_active_low	= 1,
+	.gpio_chg		= GPIO_TA_CHG_N,
+	.gpio_chg_active_low	= 1,
+	.gpio_en		= GPIO_TA_EN,
+	.gpio_en_active_low	= 1,
+	.supplied_to		= spica_charger_supplicants,
+	.num_supplicants	= ARRAY_SIZE(spica_charger_supplicants),
+};
+
+static struct platform_device spica_charger = {
+	.name		= "gpio-charger",
+	.id		= -1,
+	.dev		= {
+		.platform_data	= &spica_charger_pdata,
+	}
+};
+
+// #define BATT_CAL		2447	// 3.60V
+// #define BATT_MAXIMUM		406	// 4.176V
+// #define BATT_FULL		353	// 4.10V
+// #define BATT_ALMOST_FULL	188	// 3.8641V
+// #define BATT_HIGH		112	// 3.7554V
+// #define BATT_MED		66	// 3.6907V
+// #define BATT_LOW		43	// 3.6566V
+// #define BATT_CRITICAL	8	// 3.6037V
+// #define BATT_MINIMUM		(-28)	// 3.554V
+// #define BATT_OFF		(-128)	// 3.4029V
+
+static struct samsung_battery_threshold spica_battery_lut[] = {
+	/* ADC,	Percents	// Volts */
+	{ 2319,	0 },		// 3,4029
+	{ 2419,	3 },		// 3.5540
+	{ 2455,	5 },		// 3.6037
+	{ 2490,	15 },		// 3.6566
+	{ 2513,	30 },		// 3.6907
+	{ 2559,	50 },		// 3.7554
+	{ 2635,	70 },		// 3.8641
+	{ 2800,	100 },		// 4.1000
+};
+
+static struct samsung_battery_pdata spica_battery_pdata = {
+	.lut		= spica_battery_lut,
+	.lut_cnt	= ARRAY_SIZE(spica_battery_lut),
+	.volt_channel	= 0,
+	.temp_channel	= 1,
+	.charger	= "gpio-charger",
+	.use_for_apm	= 1,
+};
+
+static struct platform_device spica_battery = {
+	.name		= "samsung-battery",
+	.id		= -1,
+	.dev		= {
+		.platform_data	= &spica_battery_pdata,
+	}
+};
+
+/*
  * Platform devices
  */
 
@@ -1044,6 +1114,9 @@ static struct platform_device *spica_devices[] __initdata = {
 	&s3c64xx_device_dma0,
 	&s3c64xx_device_dma1,
 #endif
+	&s3c_device_adc,
+	&spica_charger,
+	&spica_battery,
 };
 
 /*
