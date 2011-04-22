@@ -23,8 +23,17 @@
  * @name:		Name for the chargers power_supply device
  * @type:		Type of the charger
  * @gpio:		GPIO which is used to indicate the chargers status
- * @gpio_active_low:	Should be set to 1 if the GPIO is active low otherwise 0
- * @supplied_to:	Array of battery names to which this chargers supplies power
+ * @gpio_active_low:	Should be set to 1 if the GPIO is active low
+ * 			otherwise 0
+ * @gpio_chg:		GPIO which is used to indicate that the charging is
+ * 			in progress
+ * @gpio_chg_active_low:Should be set to 1 if the charging GPIO is active low
+ * 			otherwise 0
+ * @gpio_en:		GPIO which is used to control the charging process
+ * @gpio_en_active_low:	Should be set to 1 if the charging control GPIO
+ * 			is active low otherwise 0
+ * @supplied_to:	Array of battery names to which this chargers
+ * 			supplies power
  * @num_supplicants:	Number of entries in the supplied_to array
  */
 struct gpio_charger_platform_data {
@@ -33,6 +42,12 @@ struct gpio_charger_platform_data {
 
 	int gpio;
 	int gpio_active_low;
+
+	int gpio_chg;
+	int gpio_chg_active_low;
+
+	int gpio_en;
+	int gpio_en_active_low;
 
 	char **supplied_to;
 	size_t num_supplicants;

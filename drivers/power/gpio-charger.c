@@ -28,6 +28,7 @@
 struct gpio_charger {
 	const struct gpio_charger_platform_data *pdata;
 	unsigned int irq;
+	unsigned int irq_chg;
 
 	struct power_supply charger;
 };
@@ -57,6 +58,21 @@ static int gpio_charger_get_property(struct power_supply *psy,
 		val->intval = gpio_get_value(pdata->gpio);
 		val->intval ^= pdata->gpio_active_low;
 		break;
+	case POWER_SUPPLY_PROP_CHARGE_TYPE:
+		if (likely(pdata->gpio_chg >= 0)) {
+			val->intval	= (gpio_get_value(pdata->gpio_chg)
+					^ pdata->gpio_chg_active_low) ?
+					POWER_SUPPLY_CHARGE_TYPE_FAST :
+					POWER_SUPPLY_CHARGE_TYPE_NONE;
+			return 0;
+		}
+		if (likely(pdata->gpio_en < 0))
+			return -EINVAL;
+		val->intval	= (gpio_get_value(pdata->gpio_chg)
+				^ pdata->gpio_chg_active_low) ?
+				POWER_SUPPLY_CHARGE_TYPE_FAST :
+				POWER_SUPPLY_CHARGE_TYPE_NONE;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -64,8 +80,33 @@ static int gpio_charger_get_property(struct power_supply *psy,
 	return 0;
 }
 
+static int gpio_charger_set_property(struct power_supply *psy,
+	enum power_supply_property psp, const union power_supply_propval *val)
+{
+	struct gpio_charger *gpio_charger = psy_to_gpio_charger(psy);
+	const struct gpio_charger_platform_data *pdata = gpio_charger->pdata;
+	int enable;
+
+	switch (psp) {
+	case POWER_SUPPLY_PROP_CHARGE_TYPE:
+		enable = val->intval > POWER_SUPPLY_CHARGE_TYPE_NONE;
+		enable ^= pdata->gpio_en_active_low;
+		gpio_set_value(pdata->gpio_en, enable);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;	
+}
+
 static enum power_supply_property gpio_charger_properties[] = {
 	POWER_SUPPLY_PROP_ONLINE,
+};
+
+static enum power_supply_property gpio_charger_properties_ext[] = {
+	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_CHARGE_TYPE,	
 };
 
 static int __devinit gpio_charger_probe(struct platform_device *pdev)
@@ -96,9 +137,16 @@ static int __devinit gpio_charger_probe(struct platform_device *pdev)
 
 	charger->name = pdata->name ? pdata->name : "gpio-charger";
 	charger->type = pdata->type;
-	charger->properties = gpio_charger_properties;
-	charger->num_properties = ARRAY_SIZE(gpio_charger_properties);
+	if (pdata->gpio_en >= 0 && pdata->gpio_chg >= 0) {
+		charger->properties = gpio_charger_properties_ext;
+		charger->num_properties = ARRAY_SIZE(gpio_charger_properties_ext);
+	} else {
+		charger->properties = gpio_charger_properties;
+		charger->num_properties = ARRAY_SIZE(gpio_charger_properties);
+	}
 	charger->get_property = gpio_charger_get_property;
+	if (pdata->gpio_en >= 0)
+		charger->set_property = gpio_charger_set_property;
 	charger->supplied_to = pdata->supplied_to;
 	charger->num_supplicants = pdata->num_supplicants;
 
@@ -113,13 +161,44 @@ static int __devinit gpio_charger_probe(struct platform_device *pdev)
 		goto err_gpio_free;
 	}
 
+	if (pdata->gpio_chg >= 0) {
+		ret = gpio_request(pdata->gpio_chg, dev_name(&pdev->dev));
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to request gpio pin: %d\n", ret);
+			goto err_gpio_free;
+		}
+		ret = gpio_direction_input(pdata->gpio_chg);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to set gpio to input: %d\n", ret);
+			goto err_gpio_chg_free;
+		}
+	}
+
+	if (pdata->gpio_en >= 0) {
+		ret = gpio_request(pdata->gpio_en, dev_name(&pdev->dev));
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to request gpio pin: %d\n", ret);
+			goto err_gpio_chg_free;
+		}
+		ret = gpio_direction_output(pdata->gpio_en,
+						pdata->gpio_en_active_low);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to set gpio to output: %d\n", ret);
+			goto err_gpio_en_free;
+		}
+	}
+
 	gpio_charger->pdata = pdata;
 
 	ret = power_supply_register(&pdev->dev, charger);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to register power supply: %d\n",
 			ret);
-		goto err_gpio_free;
+		goto err_gpio_en_free;
 	}
 
 	irq = gpio_to_irq(pdata->gpio);
@@ -133,10 +212,26 @@ static int __devinit gpio_charger_probe(struct platform_device *pdev)
 			gpio_charger->irq = irq;
 	}
 
+	if (pdata->gpio_chg >= 0 && (irq = gpio_to_irq(pdata->gpio_chg)) > 0) {
+		ret = request_any_context_irq(irq, gpio_charger_irq,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+				dev_name(&pdev->dev), charger);
+		if (ret)
+			dev_warn(&pdev->dev, "Failed to request irq: %d\n", ret);
+		else
+			gpio_charger->irq_chg = irq;
+	}
+
 	platform_set_drvdata(pdev, gpio_charger);
 
 	return 0;
 
+err_gpio_en_free:
+	if (pdata->gpio_en >= 0)
+		gpio_free(pdata->gpio_en);
+err_gpio_chg_free:
+	if (pdata->gpio_chg >= 0)
+		gpio_free(pdata->gpio_chg);
 err_gpio_free:
 	gpio_free(pdata->gpio);
 err_free:
@@ -150,10 +245,16 @@ static int __devexit gpio_charger_remove(struct platform_device *pdev)
 
 	if (gpio_charger->irq)
 		free_irq(gpio_charger->irq, &gpio_charger->charger);
+	if (gpio_charger->irq_chg)
+		free_irq(gpio_charger->irq_chg, &gpio_charger->charger);
 
 	power_supply_unregister(&gpio_charger->charger);
 
 	gpio_free(gpio_charger->pdata->gpio);
+	if (gpio_charger->pdata->gpio_en >= 0)
+		gpio_free(gpio_charger->pdata->gpio_en);
+	if (gpio_charger->pdata->gpio_chg >= 0)
+		gpio_free(gpio_charger->pdata->gpio_chg);
 
 	platform_set_drvdata(pdev, NULL);
 	kfree(gpio_charger);
@@ -161,9 +262,59 @@ static int __devexit gpio_charger_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int gpio_charger_suspend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	struct gpio_charger *gpio_charger = platform_get_drvdata(pdev);
+	const struct gpio_charger_platform_data *pdata = gpio_charger->pdata;
+
+	if (device_may_wakeup(&pdev->dev)) {
+		if (gpio_charger->irq_chg)
+			enable_irq_wake(gpio_charger->irq_chg);
+		if (gpio_charger->irq)
+			enable_irq_wake(gpio_charger->irq);
+	} else {
+		if (gpio_charger->irq_chg)
+			disable_irq(gpio_charger->irq_chg);
+		if (gpio_charger->irq)
+			disable_irq(gpio_charger->irq);
+		if (pdata->gpio_en >= 0)
+			gpio_set_value(pdata->gpio_en,
+					pdata->gpio_en_active_low);
+	}
+
+	return 0;
+}
+
+static int gpio_charger_resume(struct platform_device *pdev)
+{
+	struct gpio_charger *gpio_charger = platform_get_drvdata(pdev);
+
+	if (device_may_wakeup(&pdev->dev)) {
+		if (gpio_charger->irq_chg)
+			disable_irq_wake(gpio_charger->irq_chg);
+		if (gpio_charger->irq)
+			disable_irq_wake(gpio_charger->irq);	
+	} else {
+		if (gpio_charger->irq_chg)
+			enable_irq(gpio_charger->irq_chg);
+		if (gpio_charger->irq)
+			enable_irq(gpio_charger->irq);
+	}
+
+	return 0;
+}
+#else
+#define gpio_charger_suspend NULL
+#define gpio_charger_resume NULL
+#endif
+
 static struct platform_driver gpio_charger_driver = {
 	.probe = gpio_charger_probe,
 	.remove = __devexit_p(gpio_charger_remove),
+	.suspend = gpio_charger_suspend,
+	.resume = gpio_charger_resume,
 	.driver = {
 		.name = "gpio-charger",
 		.owner = THIS_MODULE,
