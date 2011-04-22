@@ -90,9 +90,6 @@
 #define ULCON S3C2410_LCON_CS8 | S3C2410_LCON_PNONE
 #define UFCON S3C2410_UFCON_RXTRIG8 | S3C2410_UFCON_FIFOMODE
 
-#define S3C64XX_KERNEL_PANIC_DUMP_SIZE 0x8000 /* 32kbytes */
-void *S3C64XX_KERNEL_PANIC_DUMP_ADDR;
-
 static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
 	[0] = {	/* Phone */
 		.hwport	     = 0,
