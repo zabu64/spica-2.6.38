@@ -42,6 +42,7 @@ void s3c_init_gpio(struct s3c_gpio_config *table, unsigned int count)
 		s3c_gpio_slp_setpull_updown(gpio->num, gpio->slp_pull);
 	}
 }
+EXPORT_SYMBOL(s3c_init_gpio);
 
 int s3c_gpio_slp_cfgpin(unsigned int pin, unsigned int config)
 {
