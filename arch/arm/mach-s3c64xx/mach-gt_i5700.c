@@ -845,6 +845,24 @@ static struct s3c_fb_pd_win spica_fb_win0 = {
 	.virtual_x	= 320,
 };
 
+static struct s3c_fb_pd_win spica_fb_win1 = {
+	/* this is to ensure we use win0 */
+	.win_mode	= {
+		.left_margin	= 10,
+		.right_margin	= 10,
+		.upper_margin	= 3,
+		.lower_margin	= 8,
+		.hsync_len	= 10,
+		.vsync_len	= 2,
+		.xres		= 320,
+		.yres		= 480,
+	},
+	.max_bpp	= 32,
+	.default_bpp	= 16,
+	.virtual_y	= 480 * 2,
+	.virtual_x	= 320,
+};
+
 static void spica_fb_gpio_setup_18bpp(void)
 {
 	/* Blue */
@@ -858,6 +876,7 @@ static void spica_fb_gpio_setup_18bpp(void)
 static struct s3c_fb_platdata spica_lcd_pdata __initdata = {
 	.setup_gpio	= spica_fb_gpio_setup_18bpp,
 	.win[0]		= &spica_fb_win0,
+	.win[1]		= &spica_fb_win1,
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC
 			| VIDCON1_INV_VCLK,
