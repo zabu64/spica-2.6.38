@@ -1342,6 +1342,9 @@ static struct s3c_gpio_config spica_gpio_table[] = {
  * Machine setup
  */
 
+struct class *sec_class = 0;
+EXPORT_SYMBOL(sec_class);
+
 static void __init spica_fixup(struct machine_desc *desc,
 		struct tag *tags, char **cmdline, struct meminfo *mi)
 {
@@ -1364,6 +1367,8 @@ static void __init spica_map_io(void)
 static void __init spica_machine_init(void)
 {
 	s3c_init_gpio(spica_gpio_table, ARRAY_SIZE(spica_gpio_table));
+
+	sec_class = class_create(THIS_MODULE, "sec");
 
 	/* Register I2C devices */
 	s3c_i2c0_set_platdata(&spica_misc_i2c);
