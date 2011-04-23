@@ -1025,6 +1025,12 @@ static struct mtd_partition spica_onenand_parts[] = {
 		.offset		= 0x1ed40000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
+	[10] = {
+		.name		= "dgs",
+		.size		= SZ_128K,
+		.offset		= 0x1ffe0000,
+		.mask_flags	= MTD_WRITEABLE,
+	},
 };
 
 static struct onenand_platform_data spica_onenand_pdata = {
