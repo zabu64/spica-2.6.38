@@ -344,7 +344,7 @@ static int create_lookup_table(struct samsung_battery *bat)
 	return 0;
 }
 
-static int __init samsung_battery_probe(struct platform_device *pdev)
+static int samsung_battery_probe(struct platform_device *pdev)
 {
 	struct s3c_adc_client	*client;
 	struct samsung_battery_pdata *pdata = pdev->dev.platform_data;
