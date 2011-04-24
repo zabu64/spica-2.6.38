@@ -236,7 +236,31 @@ static struct clk init_clocks_off[] = {
 		.parent		= &clk_h,
 		.enable		= s3c64xx_hclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_HCLK_DMA1,
-	},
+	}, {
+		.name		= "camera_hclk",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_CAMIF,
+	}, {
+		.name		= "jpeg_hclk",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_JPEG,
+	}, {
+		.name		= "2d",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_2D,
+	}, {
+		.name		= "3dse",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_3DSE,
+	}
 };
 
 static struct clk init_clocks[] = {
@@ -606,6 +630,15 @@ static struct clksrc_sources clkset_camif = {
 	.nr_sources	= ARRAY_SIZE(clkset_camif_list),
 };
 
+static struct clk *clkset_jpeg_list[] = {
+	&clk_h2,
+};
+
+static struct clksrc_sources clkset_jpeg = {
+	.sources	= clkset_jpeg_list,
+	.nr_sources	= ARRAY_SIZE(clkset_jpeg_list),
+};
+
 static struct clk *clkset_lcd_list[] = {
 	[0] = &clk_mout_epll.clk,
 	[1] = &clk_dout_mpll,
@@ -739,6 +772,19 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 20, .size = 4  },
 		.reg_src	= { .reg = NULL, .shift = 0, .size = 0  },
 		.sources	= &clkset_camif,
+		.disable	= 1,
+	},
+	{
+		.clk	= {
+			.name		= "jpeg",
+			.id		= -1,
+			.ctrlbit	= S3C_CLKCON_SCLK_JPEG,
+			.enable		= s3c64xx_sclk_ctrl,
+		},
+		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 24, .size = 4 },
+		.reg_src	= { .reg = NULL, .shift = 0, .size = 0 },
+		.sources	= &clkset_jpeg,
+		.disable	= 1,
 	},
 	{
 		.clk	= 	{
