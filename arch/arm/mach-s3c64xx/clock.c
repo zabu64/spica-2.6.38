@@ -195,6 +195,12 @@ static struct clk init_clocks_off[] = {
 		.enable		= s3c64xx_pclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_PCLK_SPI1,
 	}, {
+		.name		= "mfc_pclk",
+		.id		= -1,
+		.parent		= &clk_p,
+		.enable		= s3c64xx_pclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_PCLK_MFC,
+	}, {
 		.name		= "spi_48m",
 		.id		= 0,
 		.parent		= &clk_48m,
@@ -260,6 +266,18 @@ static struct clk init_clocks_off[] = {
 		.parent		= &clk_h,
 		.enable		= s3c64xx_hclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_HCLK_3DSE,
+	}, {
+		.name		= "rot",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_ROT,
+	}, {
+		.name		= "mfc_hclk",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_MFC,
 	}
 };
 
@@ -785,8 +803,17 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = NULL, .shift = 0, .size = 0 },
 		.sources	= &clkset_jpeg,
 		.disable	= 1,
-	},
-	{
+	}, {
+		.clk	= {
+			.name		= "mfc",
+			.id		= -1,
+			.ctrlbit	= S3C_CLKCON_SCLK_MFC,
+			.enable		= s3c64xx_sclk_ctrl,
+		},
+		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 28, .size = 4 },
+		.reg_src	= { .reg = S3C_CLK_SRC,	.shift = 4, .size = 1 },
+		.disable	= 1,
+	}, {
 		.clk	= 	{
 			.name		= "lcd_sclk",
 			.id		= -1,
