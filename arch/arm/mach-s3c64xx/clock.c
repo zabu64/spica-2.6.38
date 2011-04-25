@@ -273,6 +273,12 @@ static struct clk init_clocks_off[] = {
 		.enable		= s3c64xx_hclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_HCLK_ROT,
 	}, {
+		.name		= "post0_hclk",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_POST0,
+	}, {
 		.name		= "mfc_hclk",
 		.id		= -1,
 		.parent		= &clk_h,
@@ -657,6 +663,16 @@ static struct clksrc_sources clkset_jpeg = {
 	.nr_sources	= ARRAY_SIZE(clkset_jpeg_list),
 };
 
+static struct clk *clkset_mfc_list[] = {
+	[0] = &clk_h2,
+	[1] = &clk_mout_epll.clk,
+};
+
+static struct clksrc_sources clkset_mfc = {
+	.sources	= clkset_mfc_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mfc_list),
+};
+
 static struct clk *clkset_lcd_list[] = {
 	[0] = &clk_mout_epll.clk,
 	[1] = &clk_dout_mpll,
@@ -812,6 +828,18 @@ static struct clksrc_clk clksrcs[] = {
 		},
 		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 28, .size = 4 },
 		.reg_src	= { .reg = S3C_CLK_SRC,	.shift = 4, .size = 1 },
+		.sources	= &clkset_mfc,
+		.disable	= 1,
+	}, {
+		.clk	= {
+			.name		= "post0",
+			.id		= -1,
+			.ctrlbit	= S3C_CLKCON_SCLK_POST0,
+			.enable		= s3c64xx_sclk_ctrl,
+		},
+		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 12, .size = 4 },
+		.reg_src	= { .reg = S3C_CLK_SRC,	.shift = 26, .size = 2 },
+		.sources	= &clkset_lcd,
 		.disable	= 1,
 	}, {
 		.clk	= 	{
