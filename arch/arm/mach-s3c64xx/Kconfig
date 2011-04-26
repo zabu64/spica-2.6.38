@@ -25,6 +25,14 @@ config CPU_S3C6410
 	help
 	  Enable S3C6410 CPU support
 
+config S3C64XX_GENERIC_CLOCKEVENTS
+	bool
+	select GENERIC_CLOCKEVENTS
+
+config S3C64XX_ARCH_USES_GETTIMEOFFSET
+	def_bool y if !S3C64XX_GENERIC_CLOCKEVENTS
+	select ARCH_USES_GETTIMEOFFSET
+
 config S3C64XX_DMA
 	bool "S3C64XX DMA"
 	select S3C_DMA
@@ -312,5 +320,6 @@ config MACH_GT_I5700
 	select S3C64XX_SETUP_KEYPAD
 	select S3C64XX_POWER_DOMAIN
 	select S3C6410_800MHZ
+	select S3C64XX_GENERIC_CLOCKEVENTS
 	help
 	  Machine support for the Samsung Galaxy Spica GT-i5700 phone.

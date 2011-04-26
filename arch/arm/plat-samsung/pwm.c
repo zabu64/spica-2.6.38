@@ -301,10 +301,17 @@ static int s3c_pwm_probe(struct platform_device *pdev)
 	unsigned int id = pdev->id;
 	int ret;
 
+#ifdef CONFIG_S3C64XX_GENERIC_CLOCKEVENTS
+	if (id >= 2) {
+		dev_err(dev, "Only timers 0 and 1 are supported\n");
+		return -ENXIO;
+	}
+#else
 	if (id == 4) {
 		dev_err(dev, "TIMER4 is currently not supported\n");
 		return -ENXIO;
 	}
+#endif
 
 	pwm = kzalloc(sizeof(struct pwm_device), GFP_KERNEL);
 	if (pwm == NULL) {

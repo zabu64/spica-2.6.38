@@ -1416,5 +1416,5 @@ MACHINE_START(GT_I5700, "Samsung GT-i5700 (Spica)")
 	.fixup		= spica_fixup,
 	.map_io		= spica_map_io,
 	.init_machine	= spica_machine_init,
-	.timer		= &s3c24xx_timer,
+	.timer		= &s3c64xx_timer,
 MACHINE_END
