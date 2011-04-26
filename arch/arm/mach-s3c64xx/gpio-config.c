@@ -27,7 +27,7 @@ void s3c_init_gpio(struct s3c_gpio_config *table, unsigned int count)
 	u32 i;
 	struct s3c_gpio_config *gpio = table;
 
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < count; ++i, ++gpio) {
 		s3c_gpio_cfgpin(gpio->num, S3C_GPIO_SFN(gpio->cfg));
 		s3c_gpio_setpull(gpio->num, gpio->pull);
 
