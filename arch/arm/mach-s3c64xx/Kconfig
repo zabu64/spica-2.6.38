@@ -323,3 +323,11 @@ config MACH_GT_I5700
 	select S3C64XX_GENERIC_CLOCKEVENTS
 	help
 	  Machine support for the Samsung Galaxy Spica GT-i5700 phone.
+
+config GT_I5700_SAMSUNG_MODULES
+	bool "Use Samsung modules for extended functionality"
+	depends on MACH_GT_I5700
+	default n
+	help
+	  Enable this option if you are going to use Samsung modules
+	  providing additional functionality like G2D, G3D, MFC, JPEG, etc.
