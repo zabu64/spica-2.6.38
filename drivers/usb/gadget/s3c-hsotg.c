@@ -28,6 +28,7 @@
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/otg.h>
 
 #include <mach/map.h>
 
@@ -157,6 +158,7 @@ struct s3c_hsotg {
 	struct clk		*clk;
 	struct regulator	*reg_core;
 	struct regulator	*reg_io;
+	struct otg_transceiver	*xceiv;
 
 	unsigned int		dedicated_fifos:1;
 	unsigned int		vbus_sensed:1;
@@ -2597,8 +2599,10 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		goto err;
 	}
 
-	if (should_enable_udc(hsotg))
+	if (!hsotg->xceiv)
 		udc_enable(hsotg);
+	else
+		otg_set_peripheral(hsotg->xceiv, &hsotg->gadget);
 
 	/* report to the user, and return */
 
@@ -2622,7 +2626,10 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	if (!driver || driver != hsotg->driver || !driver->unbind)
 		return -EINVAL;
 
-	udc_disable(hsotg);
+	if (!hsotg->xceiv)
+		udc_disable(hsotg);
+	else
+		otg_set_peripheral(hsotg->xceiv, NULL);
 
 	driver->unbind(&hsotg->gadget);
 	hsotg->driver = NULL;
@@ -3565,6 +3572,8 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 	if (hsotg->reg_core)
 		regulator_enable(hsotg->reg_core);
 
+	hsotg->xceiv = otg_get_transceiver();
+
 	/* setup the interrupt */
 	ret = request_irq(hsotg->irq, s3c_hsotg_irq, 0, dev_name(dev), hsotg);
 	if (ret < 0) {
@@ -3606,6 +3615,9 @@ static int __devexit s3c_hsotg_remove(struct platform_device *pdev)
 	udc_disable(hsotg);
 
 	clk_put(hsotg->clk);
+
+	if (hsotg->xceiv)
+		otg_put_transceiver(hsotg->xceiv);
 
 	kfree(hsotg);
 	return 0;
