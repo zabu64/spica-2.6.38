@@ -237,44 +237,7 @@ static struct s3c2410_platform_i2c spica_misc_i2c __initdata = {
 	.bus_num	= 0,
 };
 
-static void fsa9480_usb_cb(bool attached)
-{
-	struct usb_gadget *gadget = platform_get_drvdata(&s3c_device_usb_hsotg);
-
-	if (gadget) {
-		if (attached)
-			usb_gadget_vbus_connect(gadget);
-		else
-			usb_gadget_vbus_disconnect(gadget);
-	}
-}
-
-static void fsa9480_charger_cb(bool attached)
-{
-	/* TODO */
-}
-
-static void fsa9480_deskdock_cb(bool attached)
-{
-	/* TODO */
-}
-
-static void fsa9480_cardock_cb(bool attached)
-{
-	/* TODO */
-}
-
-static void fsa9480_reset_cb(void)
-{
-	/* TODO */
-}
-
 static struct fsa9480_platform_data spica_fsa9480_pdata = {
-	.usb_cb = fsa9480_usb_cb,
-	.charger_cb = fsa9480_charger_cb,
-	.deskdock_cb = fsa9480_deskdock_cb,
-	.cardock_cb = fsa9480_cardock_cb,
-	.reset_cb = fsa9480_reset_cb,
 };
 
 static struct i2c_board_info spica_misc_i2c_devs[] __initdata = {
