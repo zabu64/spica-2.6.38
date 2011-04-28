@@ -2529,6 +2529,7 @@ static int s3c_hsotg_corereset(struct s3c_hsotg *hsotg)
 		return -EINVAL;
 	}
 
+#if 0
 	timeout = 1000;
 
 	while (1) {
@@ -2549,6 +2550,21 @@ static int s3c_hsotg_corereset(struct s3c_hsotg *hsotg)
 
 		break; 		/* reset done */
 	}
+#else
+	mdelay(1);
+
+	grstctl = readl(hsotg->regs + S3C_GRSTCTL);
+	if (grstctl & S3C_GRSTCTL_CSftRst) {
+		dev_info(hsotg->dev, "%s: reset failed, GRSTCTL=%08x\n",
+							__func__, grstctl);
+		return -ETIMEDOUT;
+	}
+	if (!(grstctl & S3C_GRSTCTL_AHBIdle)) {
+		dev_info(hsotg->dev, "%s: reset failed, GRSTCTL=%08x\n",
+							__func__, grstctl);
+		return -ETIMEDOUT;
+	}
+#endif
 
 	dev_dbg(hsotg->dev, "reset successful\n");
 	return 0;
