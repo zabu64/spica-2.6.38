@@ -3591,7 +3591,7 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 	if (hsotg->reg_io)
 		regulator_disable(hsotg->reg_io);
 	if (hsotg->reg_core)
-		regulator_enable(hsotg->reg_core);
+		regulator_disable(hsotg->reg_core);
 
 	hsotg->xceiv = otg_get_transceiver();
 
