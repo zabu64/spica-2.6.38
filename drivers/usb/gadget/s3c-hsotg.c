@@ -3565,11 +3565,12 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 	if (IS_ERR(hsotg->reg_io))
 		hsotg->reg_io = 0;
 
-	/* enable the controller temporarily (the clock is already enabled) */
+	/* enable the controller temporarily */
 	if (hsotg->reg_core)
 		regulator_enable(hsotg->reg_core);
 	if (hsotg->reg_io)
 		regulator_enable(hsotg->reg_io);
+	clk_enable(hsotg->clk);
 
 	/* wait for the hardware to get ready */
 	msleep(1);
