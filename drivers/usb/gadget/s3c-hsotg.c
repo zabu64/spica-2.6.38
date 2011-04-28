@@ -246,7 +246,11 @@ static void s3c_hsotg_dump(struct s3c_hsotg *hsotg);
  */
 static inline bool using_dma(struct s3c_hsotg *hsotg)
 {
+#ifndef CONFIG_USB_GADGET_S3C_HSOTG_DMA
 	return false;	/* support is not complete */
+#else
+	return true;
+#endif
 }
 
 /**
