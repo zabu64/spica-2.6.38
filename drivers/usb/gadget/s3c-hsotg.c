@@ -2712,7 +2712,7 @@ static void __devinit s3c_hsotg_initep_hw(struct s3c_hsotg *hsotg,
 	 */
 
 	if (using_dma(hsotg)) {
-		u32 next = S3C_DxEPCTL_NextEp((epnum + 1) % 15);
+		u32 next = S3C_DxEPCTL_NextEp((epnum + 1) % 16);
 		writel(next, hsotg->regs + S3C_DIEPCTL(epnum));
 		writel(next, hsotg->regs + S3C_DOEPCTL(epnum));
 	}
