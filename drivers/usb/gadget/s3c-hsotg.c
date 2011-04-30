@@ -2918,19 +2918,18 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 
 	dev_info(hsotg->dev, "Enabling HSOTG.");
 
+	/* enable the device */
 	if (hsotg->reg_core)
 		regulator_enable(hsotg->reg_core);
 	if (hsotg->reg_io)
 		regulator_enable(hsotg->reg_io);
-
 	clk_enable(hsotg->clk);
 
+	/* setup the PHY */
 	s3c_hsotg_otgreset(hsotg);
 	s3c_hsotg_gate(hsotg->pdev, 1);
 
-	/* we must now enable ep0 ready for host detection and then
-	 * set configuration. */
-
+	/* reset and init the core */
 	s3c_hsotg_corereset(hsotg);
 	s3c_hsotg_init(hsotg);
 
@@ -2945,10 +2944,13 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 	/* looks like soft-reset changes state of FIFOs */
 	s3c_hsotg_init_fifo(hsotg);
 
+	/* signal soft disconnect */
 	__orr32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
 
+	/* setup device maximum speed */
 	writel(1 << 18 | S3C_DCFG_DevSpd_HS,  hsotg->regs + S3C_DCFG);
 
+	/* setup interrupt masks */
 	writel(S3C_GINTSTS_DisconnInt | S3C_GINTSTS_SessReqInt |
 	       S3C_GINTSTS_ConIDStsChng | S3C_GINTSTS_USBRst |
 	       S3C_GINTSTS_EnumDone | S3C_GINTSTS_OTGInt |
@@ -3001,33 +3003,15 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 	s3c_hsotg_ctrl_epint(hsotg, 0, 0, 1);
 	s3c_hsotg_ctrl_epint(hsotg, 0, 1, 1);
 
+	/* Indicate that power-on programming is done */
 	__orr32(hsotg->regs + S3C_DCTL, S3C_DCTL_PWROnPrgDone);
 	udelay(10);  /* see openiboot */
 	__bic32(hsotg->regs + S3C_DCTL, S3C_DCTL_PWROnPrgDone);
 
 	dev_info(hsotg->dev, "DCTL=0x%08x\n", readl(hsotg->regs + S3C_DCTL));
 
-	/* S3C_DxEPCTL_USBActEp says RO in manual, but seems to be set by
-	   writing to the EPCTL register.. */
-
-	/* set to read 1 8byte packet */
-	writel(S3C_DxEPTSIZ_MC(1) | S3C_DxEPTSIZ_PktCnt(1) |
-	       S3C_DxEPTSIZ_XferSize(8), hsotg->regs + DOEPTSIZ0);
-
-	writel(s3c_hsotg_ep0_mps(hsotg->eps[0].ep.maxpacket) |
-	       S3C_DxEPCTL_CNAK | S3C_DxEPCTL_EPEna |
-	       S3C_DxEPCTL_USBActEp,
-	       hsotg->regs + S3C_DOEPCTL0);
-
-	/* enable, but don't activate EP0in */
-	writel(s3c_hsotg_ep0_mps(hsotg->eps[0].ep.maxpacket) |
-	       S3C_DxEPCTL_USBActEp, hsotg->regs + S3C_DIEPCTL0);
-
+	/* Enqueue setup request (and configure ep0) */
 	s3c_hsotg_enqueue_setup(hsotg);
-
-	dev_info(hsotg->dev, "EP0: DIEPCTL0=0x%08x, DOEPCTL0=0x%08x\n",
-		 readl(hsotg->regs + S3C_DIEPCTL0),
-		 readl(hsotg->regs + S3C_DOEPCTL0));
 
 	/* clear global NAKs */
 	writel(S3C_DCTL_CGOUTNak | S3C_DCTL_CGNPInNAK,
@@ -3062,15 +3046,19 @@ static void udc_disable(struct s3c_hsotg *hsotg)
 	/* must be at-least 3ms to allow bus to see disconnect */
 	msleep(3);
 
+	/* disable all active endpoints */
 	for (ep = 0; ep < S3C_HSOTG_EPS; ep++)
 		s3c_hsotg_ep_disable(&hsotg->eps[ep].ep);
 
+	/* signal disconnect to gadget driver */
 	call_gadget(hsotg, disconnect);
 	hsotg->gadget.speed = USB_SPEED_UNKNOWN;
 
+	/* disable the PHY */
 	s3c_hsotg_gate(hsotg->pdev, 0);
 	s3c_hsotg_otgdisable(hsotg);
 
+	/* disable the core */
 	clk_disable(hsotg->clk);
 	if (hsotg->reg_io)
 		regulator_disable(hsotg->reg_io);
