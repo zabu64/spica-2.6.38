@@ -1114,6 +1114,8 @@ static int s3c_hsotg_process_req_feature(struct s3c_hsotg *hsotg,
 	return 1;
 }
 
+static void s3c_hsotg_enqueue_setup(struct s3c_hsotg *hsotg);
+
 /**
  * s3c_hsotg_process_control - process a control request
  * @hsotg: The device state
@@ -1158,64 +1160,55 @@ static void s3c_hsotg_process_control(struct s3c_hsotg *hsotg,
 			dev_info(hsotg->dev, "new address %d\n", ctrl->wValue);
 
 			ret = s3c_hsotg_send_reply(hsotg, ep0, NULL, 0);
-			return;
+			goto handled;
 
 		case USB_REQ_GET_STATUS:
 			ret = s3c_hsotg_process_req_status(hsotg, ctrl);
-			break;
+			goto handled;
 
 		case USB_REQ_CLEAR_FEATURE:
 		case USB_REQ_SET_FEATURE:
 			ret = s3c_hsotg_process_req_feature(hsotg, ctrl);
-			break;
+			goto handled;
 		}
 	}
 
 	/* as a fallback, try delivering it to the driver to deal with */
-
-	if (ret == 0 && hsotg->driver) {
+	if (hsotg->driver) {
 		ret = hsotg->driver->setup(&hsotg->gadget, ctrl);
 		if (ret < 0)
 			dev_dbg(hsotg->dev, "driver->setup() ret %d\n", ret);
 	}
 
-	if (ret > 0) {
-		if (!ep0->dir_in) {
-			/* need to generate zlp in reply or take data */
-			/* todo - deal with any data we might be sent? */
-			ret = s3c_hsotg_send_reply(hsotg, ep0, NULL, 0);
-		}
-	}
-
+handled:
 	/* the request is either unhandlable, or is not formatted correctly
 	 * so respond with a STALL for the status stage to indicate failure.
 	 */
 
 	if (ret < 0) {
-		u32 reg;
 		u32 ctrl;
 
 		dev_dbg(hsotg->dev, "ep0 stall (dir=%d)\n", ep0->dir_in);
-		reg = (ep0->dir_in) ? S3C_DIEPCTL0 : S3C_DOEPCTL0;
 
 		/* S3C_DxEPCTL_Stall will be cleared by EP once it has
 		 * taken effect, so no need to clear later. */
 
-		ctrl = readl(hsotg->regs + reg);
+		ctrl = readl(hsotg->regs + S3C_DIEPCTL0);
+		if (ctrl & S3C_DxEPCTL_EPEna)
+			ctrl |= S3C_DxEPCTL_EPDis;
 		ctrl |= S3C_DxEPCTL_Stall;
-		ctrl |= S3C_DxEPCTL_CNAK;
-		writel(ctrl, hsotg->regs + reg);
+		writel(ctrl, hsotg->regs + S3C_DIEPCTL0);
 
 		dev_dbg(hsotg->dev,
-			"writen DxEPCTL=0x%08x to %08x (DxEPCTL=0x%08x)\n",
-			ctrl, reg, readl(hsotg->regs + reg));
+			"writen 0x%08x to DIEPCTL(=0x%08x)\n",
+			ctrl, readl(hsotg->regs + S3C_DIEPCTL0));
 
 		/* don't belive we need to anything more to get the EP
 		 * to reply with a STALL packet */
+
+		s3c_hsotg_enqueue_setup(hsotg);
 	}
 }
-
-static void s3c_hsotg_enqueue_setup(struct s3c_hsotg *hsotg);
 
 /**
  * s3c_hsotg_complete_setup - completion of a setup transfer
