@@ -774,7 +774,6 @@ static void s3c_hsotg_start_req(struct s3c_hsotg *hsotg,
 	}
 
 	ctrl |= S3C_DxEPCTL_EPEna;	/* ensure ep enabled */
-	ctrl |= S3C_DxEPCTL_USBActEp;
 	ctrl |= S3C_DxEPCTL_CNAK;	/* clear NAK set by core */
 
 	dev_dbg(hsotg->dev, "%s: DxEPCTL=0x%08x\n", __func__, ctrl);
@@ -1468,13 +1467,12 @@ static void s3c_hsotg_send_zlp(struct s3c_hsotg *hsotg,
 	dev_dbg(hsotg->dev, "sending zero-length packet\n");
 
 	/* issue a zero-sized packet to terminate this */
-	writel(S3C_DxEPTSIZ_MC(1) | S3C_DxEPTSIZ_PktCnt(1) |
-	       S3C_DxEPTSIZ_XferSize(0), hsotg->regs + S3C_DIEPTSIZ(0));
+	writel(S3C_DxEPTSIZ_PktCnt(1) | S3C_DxEPTSIZ_XferSize(0),
+						hsotg->regs + S3C_DIEPTSIZ(0));
 
 	ctrl = readl(hsotg->regs + S3C_DIEPCTL0);
 	ctrl |= S3C_DxEPCTL_CNAK;  /* clear NAK set by core */
 	ctrl |= S3C_DxEPCTL_EPEna; /* ensure ep enabled */
-	ctrl |= S3C_DxEPCTL_USBActEp;
 	writel(ctrl, hsotg->regs + S3C_DIEPCTL0);
 }
 
