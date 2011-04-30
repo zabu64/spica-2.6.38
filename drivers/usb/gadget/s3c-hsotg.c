@@ -2511,62 +2511,38 @@ static struct usb_ep_ops s3c_hsotg_ep_ops = {
 */
 static int s3c_hsotg_corereset(struct s3c_hsotg *hsotg)
 {
-	int timeout;
-	u32 grstctl;
+	u32 greset = 0;
+	int count = 0;
 
-	dev_dbg(hsotg->dev, "resetting core\n");
-
-	/* issue soft reset */
-	writel(S3C_GRSTCTL_CSftRst, hsotg->regs + S3C_GRSTCTL);
-
-	timeout = 1000;
+	/* Wait for AHB master IDLE state. */
 	do {
-		grstctl = readl(hsotg->regs + S3C_GRSTCTL);
-	} while (!(grstctl & S3C_GRSTCTL_CSftRst) && timeout-- > 0);
-
-	if (!(grstctl & S3C_GRSTCTL_CSftRst)) {
-		dev_err(hsotg->dev, "Failed to get CSftRst asserted\n");
-		return -EINVAL;
-	}
-
-#if 0
-	timeout = 1000;
-
-	while (1) {
-		u32 grstctl = readl(hsotg->regs + S3C_GRSTCTL);
-
-		if (timeout-- < 0) {
-			dev_info(hsotg->dev,
-				 "%s: reset failed, GRSTCTL=%08x\n",
-				 __func__, grstctl);
-			return -ETIMEDOUT;
+		udelay(10);
+		greset = readl(hsotg->regs + S3C_GRSTCTL);
+		if (++count > 100000) {
+			dev_err(hsotg->dev, "%s() HANG! AHB Idle GRSTCTL=%0x\n",
+				   __func__, greset);
+			return -EINVAL;
 		}
+	} while (!(greset & S3C_GRSTCTL_AHBIdle));
 
-		if (grstctl & S3C_GRSTCTL_CSftRst)
-			continue;
+	/* Core Soft Reset */
+	count = 0;
+	greset |= S3C_GRSTCTL_CSftRst;
+	writel(greset, hsotg->regs + S3C_GRSTCTL);
 
-		if (!(grstctl & S3C_GRSTCTL_AHBIdle))
-			continue;
+	do {
+		greset = readl(hsotg->regs + S3C_GRSTCTL);
+		if (++count > 10000) {
+			dev_err(hsotg->dev, "%s() HANG! Soft Reset "
+				   "GRSTCTL=%0x\n", __func__, greset);
+			return -EINVAL;
+		}
+		udelay(1);
+	} while (greset & S3C_GRSTCTL_CSftRst);
 
-		break; 		/* reset done */
-	}
-#else
-	mdelay(1);
+	/* Wait for 3 PHY Clocks */
+	msleep(1);
 
-	grstctl = readl(hsotg->regs + S3C_GRSTCTL);
-	if (grstctl & S3C_GRSTCTL_CSftRst) {
-		dev_info(hsotg->dev, "%s: reset failed, GRSTCTL=%08x\n",
-							__func__, grstctl);
-		return -ETIMEDOUT;
-	}
-	if (!(grstctl & S3C_GRSTCTL_AHBIdle)) {
-		dev_info(hsotg->dev, "%s: reset failed, GRSTCTL=%08x\n",
-							__func__, grstctl);
-		return -ETIMEDOUT;
-	}
-#endif
-
-	dev_dbg(hsotg->dev, "reset successful\n");
 	return 0;
 }
 
