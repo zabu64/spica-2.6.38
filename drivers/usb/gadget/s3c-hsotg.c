@@ -3437,16 +3437,18 @@ static struct s3c_hsotg_plat s3c_hsotg_default_pdata;
 
 static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 {
+	struct s3c_hsotg_req *ctrl_req;
 	struct s3c_hsotg_plat *plat = pdev->dev.platform_data;
 	struct device *dev = &pdev->dev;
 	struct s3c_hsotg *hsotg;
 	struct resource *res;
-	int epnum;
-	int ret;
+	int epnum, ret;
 
+	/* Use default platform data is external not provided */
 	if (!plat)
 		plat = &s3c_hsotg_default_pdata;
 
+	/* Alloc driver data */
 	hsotg = kzalloc(sizeof(struct s3c_hsotg) +
 			sizeof(struct s3c_hsotg_ep) * S3C_HSOTG_EPS,
 			GFP_KERNEL);
@@ -3455,9 +3457,11 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	/* Init driver data */
 	hsotg->dev = dev;
 	hsotg->plat = plat;
 
+	/* Get device clock */
 	hsotg->clk = clk_get(&pdev->dev, "otg");
 	if (IS_ERR(hsotg->clk)) {
 		dev_err(dev, "cannot get otg clock\n");
@@ -3465,8 +3469,7 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 		goto err_mem;
 	}
 
-	platform_set_drvdata(pdev, hsotg);
-
+	/* Get mem resource */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(dev, "cannot find register resource 0\n");
@@ -3474,6 +3477,7 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 		goto err_clk;
 	}
 
+	/* Request registers memory region */
 	hsotg->regs_res = request_mem_region(res->start, resource_size(res),
 					     dev_name(dev));
 	if (!hsotg->regs_res) {
@@ -3482,6 +3486,7 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 		goto err_clk;
 	}
 
+	/* Map registers */
 	hsotg->regs = ioremap(res->start, resource_size(res));
 	if (!hsotg->regs) {
 		dev_err(dev, "cannot map registers\n");
@@ -3489,34 +3494,32 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 		goto err_regs_res;
 	}
 
+	/* Get irq resource */
 	ret = platform_get_irq(pdev, 0);
 	if (ret < 0) {
 		dev_err(dev, "cannot find IRQ\n");
 		goto err_regs;
 	}
-
 	hsotg->irq = ret;
 
-	dev_info(dev, "regs %p, irq %d\n", hsotg->regs, hsotg->irq);
+	/* Try to get external regulators */
+	hsotg->reg_core = regulator_get(dev, "otg-core");
+	if (IS_ERR(hsotg->reg_core))
+		hsotg->reg_core = 0;
+	hsotg->reg_io = regulator_get(dev, "otg-io");
+	if (IS_ERR(hsotg->reg_io))
+		hsotg->reg_io = 0;
 
+	/* Initialize gadget structure */
 	device_initialize(&hsotg->gadget.dev);
-
 	dev_set_name(&hsotg->gadget.dev, "gadget");
-
+	hsotg->gadget.dev.parent = dev;
+	hsotg->gadget.dev.dma_mask = dev->dma_mask;
 	hsotg->gadget.is_dualspeed = 1;
 	hsotg->gadget.ops = &s3c_hsotg_gadget_ops;
 	hsotg->gadget.name = dev_name(dev);
 
-	hsotg->gadget.dev.parent = dev;
-	hsotg->gadget.dev.dma_mask = dev->dma_mask;
-
-	/* setup endpoint information */
-
-	INIT_LIST_HEAD(&hsotg->gadget.ep_list);
-	hsotg->gadget.ep0 = &hsotg->eps[0].ep;
-
-	/* allocate EP0 request */
-
+	/* Alloc control request */
 	hsotg->ctrl_req = s3c_hsotg_ep_alloc_request(&hsotg->eps[0].ep,
 						     GFP_KERNEL);
 	if (!hsotg->ctrl_req) {
@@ -3524,70 +3527,52 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 		goto err_regs;
 	}
 
-	/* initialise the endpoints now the core has been initialised */
+	/* Initialize endpoints */
+	ctrl_req = our_req(hsotg->ctrl_req);
+	INIT_LIST_HEAD(&hsotg->gadget.ep_list);
+	hsotg->gadget.ep0 = &hsotg->eps[0].ep;
+	INIT_LIST_HEAD(&ctrl_req->queue);
+	ctrl_req->req.dma = DMA_ADDR_INVALID;
 	for (epnum = 0; epnum < S3C_HSOTG_EPS; epnum++)
 		s3c_hsotg_initep(hsotg, &hsotg->eps[epnum], epnum);
 
-	s3c_hsotg_create_debug(hsotg);
+	/* Mask USB signals */
+	s3c_hsotg_gate(hsotg->pdev, 0);
 
-	our_hsotg = hsotg;
-
-	/* get the regulators if available */
-	hsotg->reg_core = regulator_get(dev, "otg-core");
-	if (IS_ERR(hsotg->reg_core))
-		hsotg->reg_core = 0;
-
-	hsotg->reg_io = regulator_get(dev, "otg-io");
-	if (IS_ERR(hsotg->reg_io))
-		hsotg->reg_io = 0;
-
-	/* enable the controller temporarily */
+	/* Enable the device to setup PHY low power mode */
 	if (hsotg->reg_core)
 		regulator_enable(hsotg->reg_core);
 	if (hsotg->reg_io)
 		regulator_enable(hsotg->reg_io);
 	clk_enable(hsotg->clk);
 
-	/* wait for the hardware to get ready */
-	msleep(1);
-
-	/* core soft reset */
-	s3c_hsotg_corereset(hsotg);
-
-	/* Signal soft disconnect before disabling the UDC block */
-	__orr32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
-	/* must be at-least 3ms to allow bus to see disconnect */
-	msleep(3);
-
+	/* Setup PHY low power mode */
 	s3c_hsotg_otgdisable(hsotg);
-	s3c_hsotg_gate(hsotg->pdev, 0);
 
-	/* disable the controller for now */
+	/* Disable the device as it's not needed at the moment */
 	clk_disable(hsotg->clk);
 	if (hsotg->reg_io)
 		regulator_disable(hsotg->reg_io);
 	if (hsotg->reg_core)
 		regulator_disable(hsotg->reg_core);
 
+	/* Try to get an OTG transceiver */
 	hsotg->xceiv = otg_get_transceiver();
 
-	/* setup the interrupt */
-	ret = request_irq(hsotg->irq, s3c_hsotg_irq, 0, dev_name(dev), hsotg);
-	if (ret < 0) {
-		dev_err(dev, "cannot claim IRQ\n");
-		goto err_regs;
-	}
+	/* Create debug entries */
+	s3c_hsotg_create_debug(hsotg);
 
-	disable_irq(hsotg->irq);
-
+	/* Probe finished */
+	dev_info(dev, "regs %p, irq %d\n", hsotg->regs, hsotg->irq);
+	platform_set_drvdata(pdev, hsotg);
+	our_hsotg = hsotg;
 	return 0;
 
+	/* Error cleanup */
 err_regs:
 	iounmap(hsotg->regs);
-
 err_regs_res:
-	release_resource(hsotg->regs_res);
-	kfree(hsotg->regs_res);
+	release_mem_region(res->start, resource_size(res));
 err_clk:
 	clk_put(hsotg->clk);
 err_mem:
@@ -3599,24 +3584,27 @@ static int __devexit s3c_hsotg_remove(struct platform_device *pdev)
 {
 	struct s3c_hsotg *hsotg = platform_get_drvdata(pdev);
 
+	/* Deny our existence from now on */
+	platform_set_drvdata(pdev, NULL);
+	our_hsotg = NULL;
+
+	/* Unregister debug entries */
 	s3c_hsotg_delete_debug(hsotg);
 
+	/* Unregister gadget driver if there is one
+	 * (thus powering the hardware down) */
 	usb_gadget_unregister_driver(hsotg->driver);
 
-	free_irq(hsotg->irq, hsotg);
+	/* Cleanup requested/allocated resources */
 	iounmap(hsotg->regs);
-
-	release_resource(hsotg->regs_res);
-	kfree(hsotg->regs_res);
-
-	udc_disable(hsotg);
-
+	release_mem_region(hsotg->regs_res->start,
+					resource_size(hsotg->regs_res));
 	clk_put(hsotg->clk);
-
 	if (hsotg->xceiv)
 		otg_put_transceiver(hsotg->xceiv);
-
 	kfree(hsotg);
+
+	/* Remove finished */
 	return 0;
 }
 
