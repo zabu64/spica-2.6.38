@@ -161,9 +161,7 @@ struct s3c_hsotg {
 	struct otg_transceiver	*xceiv;
 
 	unsigned int		dedicated_fifos:1;
-	unsigned int		vbus_sensed:1;
 	unsigned int		remote_wakeup:1;
-	unsigned int		enabled:1;
 
 	struct dentry		*debug_root;
 	struct dentry		*debug_file;
@@ -191,8 +189,6 @@ struct s3c_hsotg_req {
 	unsigned char		mapped;
 };
 
-static int should_enable_udc(struct s3c_hsotg *hsotg);
-static int should_disable_udc(struct s3c_hsotg *hsotg);
 static void udc_enable(struct s3c_hsotg *hsotg);
 static void udc_disable(struct s3c_hsotg *hsotg);
 
@@ -2682,10 +2678,9 @@ static int s3c_hsotg_gadget_vbus_session(struct usb_gadget *_gadget, int is_acti
 
 	printk("%s: %d\n", __func__, is_active);
 
-	hsotg->vbus_sensed = is_active;
-	if (should_enable_udc(hsotg))
+	if (is_active)
 		udc_enable(hsotg);
-	if (should_disable_udc(hsotg))
+	else
 		udc_disable(hsotg);
 
 	return 0;
@@ -2923,11 +2918,7 @@ static void s3c_hsotg_gate(struct platform_device *pdev, bool on);
 
 static void udc_enable(struct s3c_hsotg *hsotg)
 {
-	int epnum;
-	struct s3c_hsotg_req *ctrl_req = our_req(hsotg->ctrl_req);
-
-	if (hsotg->enabled)
-		return;
+	int epnum, ret;
 
 	dev_info(hsotg->dev, "Enabling HSOTG.");
 
@@ -2938,9 +2929,8 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 
 	clk_enable(hsotg->clk);
 
-	s3c_hsotg_gate(hsotg->pdev, 1);
-
 	s3c_hsotg_otgreset(hsotg);
+	s3c_hsotg_gate(hsotg->pdev, 1);
 
 	/* we must now enable ep0 ready for host detection and then
 	 * set configuration. */
@@ -2949,14 +2939,8 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 	s3c_hsotg_init(hsotg);
 
 	/* initialise the endpoints now the core has been initialised */
-	INIT_LIST_HEAD(&hsotg->gadget.ep_list);
-	hsotg->gadget.ep0 = &hsotg->eps[0].ep;
-	INIT_LIST_HEAD(&ctrl_req->queue);
-	ctrl_req->req.dma = DMA_ADDR_INVALID;
-	for (epnum = 0; epnum < S3C_HSOTG_EPS; epnum++) {
-		s3c_hsotg_initep(hsotg, &hsotg->eps[epnum], epnum);
+	for (epnum = 0; epnum < S3C_HSOTG_EPS; epnum++)
 		s3c_hsotg_initep_hw(hsotg, &hsotg->eps[epnum], epnum);
-	}
 
 	/* set the PLL on, remove the HNP/SRP and set the PHY */
 	writel(S3C_GUSBCFG_PHYIf16 | S3C_GUSBCFG_TOutCal(7) |
@@ -3059,24 +3043,23 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 	/* remove the soft-disconnect and let's go */
 	__bic32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
 
-	enable_irq(hsotg->irq);
+	/* Setup the interrupt */
+	ret = request_irq(hsotg->irq, s3c_hsotg_irq, 0,
+						dev_name(hsotg->dev), hsotg);
+	if (ret < 0)
+		dev_err(hsotg->dev, "failed to claim IRQ\n");
 
 	s3c_hsotg_dump(hsotg);
-
-	hsotg->enabled = 1;
 }
 
 static void udc_disable(struct s3c_hsotg *hsotg)
 {
 	int ep;
 
-	if (!hsotg->enabled)
-		return;
-
 	dev_info(hsotg->dev, "Disabling HSOTG.");
 
 	/* Disable IRQ and make sure that the handler is not running */
-	disable_irq(hsotg->irq);
+	free_irq(hsotg->irq, hsotg);
 
 	/* Signal soft disconnect before disabling the UDC block */
 	__orr32(hsotg->regs + S3C_DCTL, S3C_DCTL_SftDiscon);
@@ -3088,49 +3071,15 @@ static void udc_disable(struct s3c_hsotg *hsotg)
 
 	call_gadget(hsotg, disconnect);
 	hsotg->gadget.speed = USB_SPEED_UNKNOWN;
-	s3c_hsotg_otgdisable(hsotg);
-	s3c_hsotg_gate(hsotg->pdev, 0);
-	clk_disable(hsotg->clk);
 
+	s3c_hsotg_gate(hsotg->pdev, 0);
+	s3c_hsotg_otgdisable(hsotg);
+
+	clk_disable(hsotg->clk);
 	if (hsotg->reg_io)
 		regulator_disable(hsotg->reg_io);
 	if (hsotg->reg_core)
 		regulator_disable(hsotg->reg_core);
-
-	hsotg->enabled = 0;
-}
-
-/**
- * should_enable_udc - Tells if UDC should be enabled
- * @udc: udc device
- * Context: any
- *
- * The UDC should be enabled if :
-
- *  - and a gadget driver is bound
- *  - and vbus is sensed (or no vbus sense is available)
- *
- * Returns 1 if UDC should be enabled, 0 otherwise
- */
-static inline int should_enable_udc(struct s3c_hsotg *hsotg)
-{
-	return hsotg->driver && hsotg->vbus_sensed;
-}
-
-/**
- * should_disable_udc - Tells if UDC should be disabled
- * @udc: udc device
- * Context: any
- *
- * The UDC should be disabled if :
- *  - or no gadget driver is bound
- *  - or no vbus is sensed (when vbus sesing is available)
- *
- * Returns 1 if UDC should be disabled
- */
-static inline int should_disable_udc(struct s3c_hsotg *hsotg)
-{
-	return (!hsotg->driver) || (!hsotg->vbus_sensed);
 }
 
 /**
