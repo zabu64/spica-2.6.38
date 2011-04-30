@@ -134,7 +134,12 @@ struct s3c_hsotg_ep {
  * @regs: The memory area mapped for accessing registers.
  * @regs_res: The resource that was allocated when claiming register space.
  * @irq: The IRQ number we are using
+ * @clk: The clock driving the device
+ * @reg_core: Core voltage regulator, if exists
+ * @reg_io: IO voltage regulator, if exists
+ * @xceiv: External OTG transceiver, if exists
  * @dedicated_fifos: Set if the hardware has dedicated IN-EP fifos.
+ * @remote_wakeup: Set if remote wakeup is enabled
  * @debug_root: root directrory for debugfs.
  * @debug_file: main status file for debugfs.
  * @debug_fifo: FIFO status file for debugfs.
