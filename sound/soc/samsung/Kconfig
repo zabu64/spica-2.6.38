@@ -169,3 +169,14 @@ config SND_SOC_SAMSUNG_SMDK_SPDIF
 	select SND_SAMSUNG_SPDIF
 	help
 	  Say Y if you want to add support for SoC S/PDIF audio on the SMDK.
+
+config SND_SOC_SAMSUNG_GT_I5700
+	tristate "SoC I2S Audio support for GT-i5700 (Spica) - AK4671/MAX9877"
+	depends on SND_SOC_SAMSUNG && (MACH_GT_I5700)
+	select SND_SAMSUNG_I2S
+	select SND_SOC_AK4671
+	select SND_SOC_MAX9877
+	help
+	  Say Y if you want to add support for SoC audio on Samsung
+	  Galaxt GT-i5700 (Spica) phone with the AK4671 audio codec
+	  and MAX9877 audio amplifier.
