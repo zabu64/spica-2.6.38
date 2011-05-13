@@ -255,6 +255,7 @@ static struct i2c_board_info spica_misc_i2c_devs[] __initdata = {
 	{
 		.type		= "ak8973",
 		.addr		= 0x1c,
+		.irq		= IRQ_EINT(2),
 	},
 };
 
