@@ -473,8 +473,8 @@ static int samsung_battery_resume(struct platform_device *pdev)
 	return 0;
 }
 #else
-#define samsung_batterytery_suspend NULL
-#define samsung_batterytery_resume NULL
+#define samsung_battery_suspend NULL
+#define samsung_battery_resume NULL
 #endif
 
 static struct platform_driver samsung_battery_driver = {
