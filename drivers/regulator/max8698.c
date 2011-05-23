@@ -241,6 +241,7 @@ static int max8698_get_voltage_register(struct regulator_dev *rdev,
 		mask = 0xf;
 		if (ldo == MAX8698_LDO3)
 			shift = 4;
+		break;
 	case MAX8698_LDO4 ... MAX8698_LDO7:
 		reg = MAX8698_REG_LDO4 + (ldo - MAX8698_LDO4);
 		break;
