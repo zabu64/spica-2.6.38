@@ -562,6 +562,7 @@ static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
 	{
 		.type		= "qt5480",
 		.addr		= 0x30,
+		.irq		= IRQ_EINT(20),
 	},
 };
 
