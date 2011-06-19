@@ -13,6 +13,21 @@
 		.section        ".start", "ax"
 
 __GT_I5700_start:
+		@ Set the UART switch to PDA to allow serial debugging
+		mov	r0, #0x7f000000
+		orr	r0, r0, #0x8800
+		@ Set GPK(4) to output
+		ldr	r1, [r0]
+		mvn	r2, #0x000f0000
+		and	r1, r1, r2
+		orr	r1, r1, #0x00010000
+		str	r1, [r0]
+		@ Set GPK(4) to 1
+		orr	r0, r0, #0x08
+		ldr	r1, [r0]
+		orr	r1, r1, #0x0010
+		str	r1, [r0]
+
 		@ Our bootloader identifies us as an SMDK6410 board,
 		@ which we aren't... This is a hack to put the correct
 		@ mach type into r7 if it contains the mach type of SMDK6410
