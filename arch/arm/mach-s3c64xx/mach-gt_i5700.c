@@ -41,6 +41,7 @@
 #include <linux/mtd/partitions.h>
 #include <linux/power/samsung_battery.h>
 #include <linux/power/gpio-charger.h>
+#include <linux/input/qt5480_ts.h>
 
 #include <video/s6d05a.h>
 
@@ -558,11 +559,19 @@ static struct platform_device spica_touch_i2c = {
 	.dev.platform_data	= &spica_touch_i2c_pdata,
 };
 
+static struct qt5480_platform_data spica_qt5480_pdata = {
+	.rst_gpio	= GPIO_TOUCH_RST,
+	.rst_inverted	= 0,
+	.en_gpio	= GPIO_TOUCH_EN,
+	.en_inverted	= 0,
+};
+
 static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
 	{
-		.type		= "qt5480",
+		.type		= "qt5480_ts",
 		.addr		= 0x30,
 		.irq		= IRQ_EINT(20),
+		.platform_data	= &spica_qt5480_pdata,
 	},
 };
 
