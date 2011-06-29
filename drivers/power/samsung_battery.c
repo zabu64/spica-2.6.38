@@ -93,11 +93,16 @@ static void samsung_battery_ext_power_changed(struct power_supply *psy)
 /* Properties which we support */
 static enum power_supply_property samsung_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_HEALTH,
+	POWER_SUPPLY_PROP_PRESENT,
+	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN,
 	POWER_SUPPLY_PROP_CHARGE_NOW,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_TEMP,
+	POWER_SUPPLY_PROP_CAPACITY,
+	POWER_SUPPLY_PROP_TECHNOLOGY
 };
 
 /* Calculates percentage value based on battery voltage */
@@ -174,6 +179,27 @@ static int samsung_battery_get_property(struct power_supply *psy,
 		/* Now the temperature value must be translated from voltage
 		 * into tenths of degree Celsius. Using a lookup table again. */
 		val->intval = lookup_temperature(bat, temp);
+		break;
+	case POWER_SUPPLY_PROP_HEALTH:
+		/* TODO: Add battery status checking. */
+		val->intval = POWER_SUPPLY_HEALTH_GOOD;
+		break;
+	case POWER_SUPPLY_PROP_PRESENT:
+	case POWER_SUPPLY_PROP_ONLINE:
+		/* TODO: Add battery presence detection (may be optional). */
+		val->intval = 1;
+		break;
+	case POWER_SUPPLY_PROP_TECHNOLOGY:
+		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+		break;
+	case POWER_SUPPLY_PROP_CAPACITY:
+		local_irq_save(flags);
+		volts = bat->volt_value;
+		local_irq_restore(flags);
+		/* Now things get tricky... We have to use a lookup table
+		 * to linearize the voltage into percents. We assume that
+		 * values are linear inside each lookup range. */
+		val->intval = lookup_percentage(bat, volts) / 1000;
 		break;
 	default:
 		ret = -EINVAL;
