@@ -974,35 +974,48 @@ static struct mtd_partition spica_onenand_parts[] = {
 	/* Following partitions are incompatible with legacy images */
 	[5] = {
 		.name		= "system",
-		.size		= SZ_128M,
+		.size		= SZ_128M + SZ_16M + SZ_8M,
 		.offset		= 0x006c0000,
 	},
 	[6] = {
 		.name		= "data",
-		.size		= SZ_256M + SZ_32M + SZ_8M + SZ_4M + SZ_2M,
-		.offset		= 0x086c0000,
+		.size		= SZ_256M + SZ_16M + SZ_4M + SZ_2M,
+		.offset		= 0x09ec0000,
 	},
 	/* End of incompatible partitions */
 	[7] = {
 		.name		= "xbin",
-		.size		= SZ_32M + SZ_8M,
+		.size		= SZ_16M + SZ_8M,
 		.offset		= 0x1b540000,
 	},
 	[8] = {
+		.name		= "cache",
+		.size		= SZ_8M,
+		.offset		= 0x1cd40000,
+	},
+	/* This is a new efs partition to keep the original one untouched */
+	[9] = {
+		.name		= "efs",
+		.size		= SZ_8M,
+		.offset		= 0x1d540000,
+	},
+	[10] = {
 		.name		= "modem",
 		.size		= SZ_16M,
 		.offset		= 0x1dd40000,
 	},
-	[9] = {
-		.name		= "efs",
+	/* Original efs partition */
+	[11] = {
+		.name		= "efs_legacy",
 		.size		= SZ_8M,
 		.offset		= 0x1ed40000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
-	[10] = {
-		.name		= "dgs",
-		.size		= SZ_128K,
-		.offset		= 0x1ffe0000,
+	/* XSR metadata */
+	[12] = {
+		.name		= "reservoir",
+		.size		= SZ_8M + SZ_2M + SZ_512K + SZ_256K,
+		.offset		= 0x1f540000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
 };
