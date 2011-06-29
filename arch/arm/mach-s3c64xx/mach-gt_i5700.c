@@ -1544,7 +1544,7 @@ static void __init spica_machine_init(void)
  * Machine definition
  */
 
-MACHINE_START(GT_I5700, "Samsung GT-i5700 (Spica)")
+MACHINE_START(GT_I5700, "GT-I5700")
 	/* Maintainer: Currently none */
 	.boot_params	= S3C64XX_PA_SDRAM + 0x100,
 	.init_irq	= s3c6410_init_irq,
