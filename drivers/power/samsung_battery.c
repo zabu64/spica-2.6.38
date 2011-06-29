@@ -132,7 +132,7 @@ static int lookup_percentage(struct samsung_battery *bat, int voltage)
 /* Calculates temperature value based on ADC sample */
 static int lookup_temperature(struct samsung_battery *bat, int temperature)
 {
-	return 22000;
+	return 220;
 }
 
 /* Gets a property */
