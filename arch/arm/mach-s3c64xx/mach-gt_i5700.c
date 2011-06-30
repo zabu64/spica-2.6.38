@@ -914,7 +914,7 @@ static struct gpio_keys_button spica_gpio_keys_data[] = {
 	},
 	{
 		.gpio			= GPIO_HOLD_KEY_N,
-		.code			= 217,
+		.code			= 251,
 		.desc			= "Hold",
 		.active_low		= 1,
 		.debounce_interval	= 5,
