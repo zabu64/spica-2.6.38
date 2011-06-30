@@ -594,16 +594,16 @@ static struct android_pmem_platform_data pmem_gpu1_pdata = {
 	.no_allocator	= 0,
 	.cached		= 1,
 	.buffered	= 1,
-        .start		= GPU1_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_GPU1,
+	.start		= GPU1_RESERVED_PMEM_START,
+	.size		= RESERVED_PMEM_GPU1,
 };
 
 static struct android_pmem_platform_data pmem_render_pdata = {
 	.name		= "pmem_render",
 	.no_allocator	= 1,
 	.cached		= 0,
-        .start		= RENDER_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_RENDER,
+	.start		= RENDER_RESERVED_PMEM_START,
+	.size		= RESERVED_PMEM_RENDER,
 };
 
 static struct android_pmem_platform_data pmem_stream_pdata = {
