@@ -722,8 +722,10 @@ static int s3c6410_onenand_bbt_wait(struct mtd_info *mtd, int state)
 
 	return 0;
 }
+#endif
 
-void s3c6410_onenand_prefetch(struct mtd_info *mtd, int cmd,
+#ifdef CONFIG_MTD_ONENAND_S3C6410_PREFETCH
+static void s3c6410_onenand_prefetch(struct mtd_info *mtd, int cmd,
 						loff_t address, size_t len)
 {
 	struct onenand_chip *this = mtd->priv;
@@ -1131,10 +1133,12 @@ static void s3c_onenand_setup(struct mtd_info *mtd)
 		this->command = s3c6410_onenand_command;
 		this->wait = s3c6410_onenand_wait;
 		this->bbt_wait = s3c6410_onenand_bbt_wait;
-		this->prefetch = s3c6410_onenand_prefetch;
 		s3c2410_dma_config(S3C_DMA_ONENAND_CH, 4);
 		s3c2410_dma_set_buffdone_fn(S3C_DMA_ONENAND_CH,
 						s3c6410_onenand_buffdone);
+#endif
+#ifdef CONFIG_MTD_ONENAND_S3C6410_PREFETCH
+		this->prefetch = s3c6410_onenand_prefetch;
 #endif
 	}
 

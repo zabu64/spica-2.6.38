@@ -42,6 +42,10 @@ config MTD_ONENAND_S3C6410_DMA
 	bool "Enable DMA support on S3C6410"
 	depends on MTD_ONENAND_SAMSUNG && CPU_S3C6410 && S3C64XX_DMA
 
+config MTD_ONENAND_S3C6410_PREFETCH
+	bool "Enable pipelined read/write ahead on S3C6410"
+	depends on MTD_ONENAND_SAMSUNG && CPU_S3C6410
+
 config MTD_ONENAND_OTP
 	bool "OneNAND OTP Support"
 	select HAVE_MTD_OTP
