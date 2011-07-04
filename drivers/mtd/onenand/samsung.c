@@ -146,11 +146,11 @@ struct s3c_onenand {
 	dma_addr_t	ahb_phys;
 	struct resource *ahb_res;
 	int		bootram_command;
-	void __iomem	*page_buf;
+	void		*page_buf;
 	dma_addr_t	page_buf_dma;
-	void __iomem	*oob_buf;
+	void		*oob_buf;
 	dma_addr_t	oob_buf_dma;
-	void __iomem	*dummy_buf;
+	void		*dummy_buf;
 	dma_addr_t	dummy_buf_dma;
 	unsigned int	(*mem_addr)(int fba, int fpa, int fsa);
 	unsigned int	(*cmd_map)(unsigned int type, unsigned int val);
