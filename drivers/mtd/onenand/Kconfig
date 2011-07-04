@@ -38,6 +38,10 @@ config MTD_ONENAND_SAMSUNG
           S3C64XX/S5PC100 use command mapping method.
           S5PC110/S5PC210 use generic OneNAND method.
 
+config MTD_ONENAND_S3C6410_DMA
+	bool "Enable DMA support on S3C6410"
+	depends on MTD_ONENAND_SAMSUNG && CPU_S3C6410 && S3C64XX_DMA
+
 config MTD_ONENAND_OTP
 	bool "OneNAND OTP Support"
 	select HAVE_MTD_OTP

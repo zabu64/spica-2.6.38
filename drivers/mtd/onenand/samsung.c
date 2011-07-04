@@ -516,7 +516,7 @@ static int s3c_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 	return 0;
 }
 
-#ifdef CONFIG_S3C64XX_DMA_ONENAND
+#ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
 static void s3c6410_onenand_buffdone(struct s3c2410_dma_chan *channel,
 				void *dev_id, int size,
 				enum s3c2410_dma_buffresult result)
@@ -1122,9 +1122,10 @@ static void s3c_onenand_setup(struct mtd_info *mtd)
 	this->wait = s3c_onenand_wait;
 	this->bbt_wait = s3c_onenand_bbt_wait;
 	this->unlock_all = s3c_unlock_all;
+	this->command = s3c_onenand_command;
 
-#ifdef CONFIG_S3C64XX_DMA_ONENAND
 	if (onenand->type == TYPE_S3C6410) {
+#ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
 		init_completion(&onenand->complete);
 		this->command = s3c6410_onenand_command;
 		this->wait = s3c6410_onenand_wait;
@@ -1133,12 +1134,8 @@ static void s3c_onenand_setup(struct mtd_info *mtd)
 		s3c2410_dma_config(S3C_DMA_ONENAND_CH, 4);
 		s3c2410_dma_set_buffdone_fn(S3C_DMA_ONENAND_CH,
 						s3c6410_onenand_buffdone);
-	} else {
-		this->command = s3c_onenand_command;
-	}
-#else
-	this->command = s3c_onenand_command;
 #endif
+	}
 
 	this->read_bufferram = onenand_read_bufferram;
 	this->write_bufferram = onenand_write_bufferram;
@@ -1236,7 +1233,7 @@ static int s3c_onenand_probe(struct platform_device *pdev)
 			goto page_buf_fail;
 		}
 
-#ifdef CONFIG_S3C64XX_DMA_ONENAND
+#ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
 		/* Allocate 4KiB buffer for dummy writes */
 		onenand->dummy_buf = dma_alloc_coherent(&pdev->dev, SZ_4K,
 					&onenand->dummy_buf_dma, GFP_KERNEL);
@@ -1337,7 +1334,7 @@ dma_ioremap_failed:
 	if (onenand->dma_res)
 		release_mem_region(onenand->dma_res->start,
 				   resource_size(onenand->dma_res));
-#ifdef CONFIG_S3C64XX_DMA_ONENAND
+#ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
 	dma_free_coherent(&pdev->dev, SZ_4K, onenand->oob_buf,
 							onenand->oob_buf_dma);
 oob_buf_fail:

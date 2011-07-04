@@ -765,7 +765,7 @@ static int __init s3c64xx_dma_init(void)
 	s3c64xx_dma_init1(0, DMACH_UART0, IRQ_DMA0, 0x75000000);
 	s3c64xx_dma_init1(8, DMACH_PCM1_TX, IRQ_DMA1, 0x75100000);
 
-#ifdef CONFIG_S3C64XX_DMA_ONENAND
+#ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
 	/* OneNAND can only use channel 3 of DMAC0, so mark it as used permanently */
 	s3c2410_chans[S3C_DMA_ONENAND_CHNO].in_use = 1;
 	s3c2410_chans[S3C_DMA_ONENAND_CHNO].peripheral = DMACH_ONENAND;

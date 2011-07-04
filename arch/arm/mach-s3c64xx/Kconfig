@@ -37,10 +37,6 @@ config S3C64XX_DMA
 	bool "S3C64XX DMA"
 	select S3C_DMA
 
-config S3C64XX_DMA_ONENAND
-	bool "Enable OneNAND DMA support"
-	depends on S3C64XX_DMA
-
 config S3C64XX_DMA_ENGINE
 	bool "S3C64XX DMA (using generic PL08x DMA engine driver)"
 	depends on !S3C64XX_DMA && EXPERIMENTAL
