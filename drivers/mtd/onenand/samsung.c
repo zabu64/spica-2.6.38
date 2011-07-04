@@ -1335,17 +1335,21 @@ dma_ioremap_failed:
 		release_mem_region(onenand->dma_res->start,
 				   resource_size(onenand->dma_res));
 #ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
-	dma_free_coherent(&pdev->dev, SZ_4K, onenand->oob_buf,
+	if (onenand->type != TYPE_S5PC110)
+		dma_free_coherent(&pdev->dev, SZ_4K, onenand->oob_buf,
 							onenand->oob_buf_dma);
 oob_buf_fail:
-	dma_free_coherent(&pdev->dev, SZ_4K, onenand->dummy_buf,
+	if (onenand->type != TYPE_S5PC110)
+		dma_free_coherent(&pdev->dev, SZ_4K, onenand->dummy_buf,
 							onenand->dummy_buf_dma);
 dummy_buf_fail:
 #else
-	kfree(onenand->oob_buf);
+	if (onenand->type != TYPE_S5PC110)
+		kfree(onenand->oob_buf);
 oob_buf_fail:
 #endif
-	dma_free_coherent(&pdev->dev, SZ_4K, onenand->page_buf,
+	if (onenand->type != TYPE_S5PC110)
+		dma_free_coherent(&pdev->dev, SZ_4K, onenand->page_buf,
 							onenand->page_buf_dma);
 page_buf_fail:
 	if (onenand->ahb_addr)
@@ -1389,10 +1393,18 @@ static int __devexit s3c_onenand_remove(struct platform_device *pdev)
 			   resource_size(onenand->base_res));
 
 	platform_set_drvdata(pdev, NULL);
-	kfree(onenand->oob_buf);
-	dma_free_coherent(&pdev->dev, SZ_4K, onenand->page_buf,
+	if (onenand->type != TYPE_S5PC110) {
+		dma_free_coherent(&pdev->dev, SZ_4K, onenand->page_buf,
 							onenand->page_buf_dma);
-	kfree(onenand->page_buf);
+#ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
+		dma_free_coherent(&pdev->dev, SZ_4K, onenand->oob_buf,
+							onenand->oob_buf_dma);
+		dma_free_coherent(&pdev->dev, SZ_4K, onenand->dummy_buf,
+							onenand->dummy_buf_dma);
+#else
+		kfree(onenand->oob_buf);
+#endif
+	}
 	kfree(onenand);
 	kfree(mtd);
 	return 0;
