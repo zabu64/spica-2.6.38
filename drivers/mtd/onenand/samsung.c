@@ -755,13 +755,8 @@ static void s3c6410_onenand_prefetch(struct mtd_info *mtd, int cmd,
 			s3c_write_cmd(ONENAND_CMD_PIPELINED_READ | pcount, cmd_map_10);
 			break;
 		case ONENAND_CMD_PROG:
-			s3c_write_reg(0, TRANS_SPARE_OFFSET);
-			s3c_write_cmd(ONENAND_CMD_PIPELINED_WRITE | pcount, cmd_map_10);
-			break;
 		case ONENAND_CMD_PROGOOB:
-			s3c_write_reg(TSRF, TRANS_SPARE_OFFSET);
-			s3c_write_cmd(ONENAND_CMD_PIPELINED_WRITE | pcount, cmd_map_10);
-			break;
+			/* Unsupported yet. */
 		default:
 			return;
 	}
