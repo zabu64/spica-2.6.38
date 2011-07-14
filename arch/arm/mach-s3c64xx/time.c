@@ -4,8 +4,7 @@
  *
  * based on linux/arch/arm/mach-s5pv310/time.c
  *
- * S3C64XX HRT support
- * PWM 3/4 is used for this feature
+ * S3C64XX generic clockevent/clocksource support using PWM 3 and PWM 4 timers.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,8 +19,6 @@
 #include <linux/clockchips.h>
 #include <linux/platform_device.h>
 
-#include <asm/smp_twd.h>
-
 #include <mach/map.h>
 #include <plat/regs-timer.h>
 #include <asm/mach/time.h>
@@ -34,7 +31,7 @@ static struct clk *tdiv3;
 static struct clk *tdiv4;
 static struct clk *timerclk;
 
-static void s3c64xx_pwm_stop(unsigned int pwm_id)
+static inline void s3c64xx_pwm_stop(unsigned int pwm_id)
 {
 	unsigned long tcon;
 	unsigned long flags;
@@ -59,7 +56,7 @@ static void s3c64xx_pwm_stop(unsigned int pwm_id)
 	local_irq_restore(flags);
 }
 
-static void s3c64xx_pwm_init(unsigned int pwm_id, unsigned long tcnt)
+static inline void s3c64xx_pwm_init(unsigned int pwm_id, unsigned long tcnt)
 {
 	unsigned long tcon;
 	unsigned long flags;
@@ -172,7 +169,7 @@ static struct clock_event_device pwm_event_device = {
 	.set_mode	= s3c64xx_pwm_set_mode,
 };
 
-irqreturn_t s3c64xx_clock_event_isr(int irq, void *dev_id)
+static irqreturn_t s3c64xx_clock_event_isr(int irq, void *dev_id)
 {
 	struct clock_event_device *evt = &pwm_event_device;
 
@@ -191,15 +188,8 @@ static void __init s3c64xx_clockevent_init(void)
 {
 	unsigned long pclk;
 	unsigned long clock_rate;
-	struct clk *tscaler;
 
 	pclk = clk_get_rate(timerclk);
-
-	/* configure clock tick */
-
-	tscaler = clk_get_parent(tdiv3);
-
-	clk_set_rate(tscaler, pclk / 3);
 	clk_set_rate(tdiv3, pclk / 6);
 	clk_set_parent(tin3, tdiv3);
 
@@ -230,7 +220,7 @@ struct clocksource pwm_clocksource = {
 	.rating		= 250,
 	.read		= s3c64xx_pwm4_read,
 	.mask		= CLOCKSOURCE_MASK(32),
-	.flags		= CLOCK_SOURCE_IS_CONTINUOUS ,
+	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
 
 static void __init s3c64xx_clocksource_init(void)
@@ -252,9 +242,11 @@ static void __init s3c64xx_clocksource_init(void)
 		panic("%s: can't register clocksource\n", pwm_clocksource.name);
 }
 
-static void __init s3c64xx_timer_resources(void)
+static void __init s3c64xx_timer_init_common(void)
 {
 	struct platform_device tmpdev;
+	struct clk *tscaler;
+	unsigned long pclk;
 
 	tmpdev.dev.bus = &platform_bus_type;
 
@@ -284,11 +276,16 @@ static void __init s3c64xx_timer_resources(void)
 		panic("failed to get pwm-tdiv4 clock for system timer");
 
 	clk_enable(tin4);
+
+	pclk = clk_get_rate(timerclk);
+	tscaler = clk_get_parent(tdiv3);
+
+	clk_set_rate(tscaler, pclk / 3);
 }
 
 static void __init s3c64xx_timer_init(void)
 {
-	s3c64xx_timer_resources();
+	s3c64xx_timer_init_common();
 	s3c64xx_clockevent_init();
 	s3c64xx_clocksource_init();
 }
