@@ -141,6 +141,19 @@ static int s3c64xx_pwm_set_next_event(unsigned long cycles,
 	return 0;
 }
 
+static void s3c64xx_resume_clock_event(void)
+{
+	unsigned long pclk;
+	struct clk *tscaler;
+
+	pclk = clk_get_rate(timerclk);
+	tscaler = clk_get_parent(tdiv3);
+	clk_set_rate(tscaler, pclk / 3);
+
+	clk_set_rate(tdiv3, pclk / 6);
+	clk_set_parent(tin3, tdiv3);
+}
+
 static void s3c64xx_pwm_set_mode(enum clock_event_mode mode,
 				struct clock_event_device *evt)
 {
@@ -155,7 +168,9 @@ static void s3c64xx_pwm_set_mode(enum clock_event_mode mode,
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
+		break;
 	case CLOCK_EVT_MODE_RESUME:
+		s3c64xx_resume_clock_event();
 		break;
 	}
 }
@@ -186,12 +201,7 @@ static struct irqaction s3c64xx_clock_event_irq = {
 
 static void __init s3c64xx_clockevent_init(void)
 {
-	unsigned long pclk;
 	unsigned long clock_rate;
-
-	pclk = clk_get_rate(timerclk);
-	clk_set_rate(tdiv3, pclk / 6);
-	clk_set_parent(tin3, tdiv3);
 
 	clock_rate = clk_get_rate(tin3);
 
@@ -215,23 +225,39 @@ static cycle_t s3c64xx_pwm4_read(struct clocksource *cs)
 	return (cycle_t) ~__raw_readl(S3C_TIMERREG(0x40));
 }
 
-struct clocksource pwm_clocksource = {
+#ifdef CONFIG_PM
+static void s3c64xx_clocksource_resume(struct clocksource *cs)
+{
+	unsigned long pclk;
+	struct clk *tscaler;
+
+	pclk = clk_get_rate(timerclk);
+	tscaler = clk_get_parent(tdiv4);
+	clk_set_rate(tscaler, pclk / 3);
+
+	clk_set_rate(tdiv4, pclk / 6);
+	clk_set_parent(tin4, tdiv4);
+
+	s3c64xx_pwm_init(4, ~0);
+	s3c64xx_pwm_start(4, 1);
+}
+#else
+#define s3c64xx_clocksource_suspend	NULL
+#define s3c64xx_clocksource_resume	NULL
+#endif
+
+static struct clocksource pwm_clocksource = {
 	.name		= "pwm_timer4",
 	.rating		= 250,
 	.read		= s3c64xx_pwm4_read,
 	.mask		= CLOCKSOURCE_MASK(32),
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
+	.resume		= s3c64xx_clocksource_resume,
 };
 
 static void __init s3c64xx_clocksource_init(void)
 {
-	unsigned long pclk;
 	unsigned long clock_rate;
-
-	pclk = clk_get_rate(timerclk);
-
-	clk_set_rate(tdiv4, pclk / 6);
-	clk_set_parent(tin4, tdiv4);
 
 	clock_rate = clk_get_rate(tin4);
 
@@ -245,16 +271,14 @@ static void __init s3c64xx_clocksource_init(void)
 static void __init s3c64xx_timer_init_common(void)
 {
 	struct platform_device tmpdev;
-	struct clk *tscaler;
 	unsigned long pclk;
+	struct clk *tscaler;
 
 	tmpdev.dev.bus = &platform_bus_type;
 
 	timerclk = clk_get(NULL, "timers");
 	if (IS_ERR(timerclk))
 		panic("failed to get timers clock for system timer");
-
-	clk_enable(timerclk);
 
 	tmpdev.id = 3;
 	tin3 = clk_get(&tmpdev.dev, "pwm-tin");
@@ -264,7 +288,6 @@ static void __init s3c64xx_timer_init_common(void)
 	tdiv3 = clk_get(&tmpdev.dev, "pwm-tdiv");
 	if (IS_ERR(tdiv3))
 		panic("failed to get pwm-tdiv3 clock for system timer");
-	clk_enable(tin3);
 
 	tmpdev.id = 4;
 	tin4 = clk_get(&tmpdev.dev, "pwm-tin");
@@ -275,12 +298,19 @@ static void __init s3c64xx_timer_init_common(void)
 	if (IS_ERR(tdiv4))
 		panic("failed to get pwm-tdiv4 clock for system timer");
 
-	clk_enable(tin4);
-
 	pclk = clk_get_rate(timerclk);
 	tscaler = clk_get_parent(tdiv3);
-
 	clk_set_rate(tscaler, pclk / 3);
+
+	clk_set_rate(tdiv3, pclk / 6);
+	clk_set_parent(tin3, tdiv3);
+
+	clk_set_rate(tdiv4, pclk / 6);
+	clk_set_parent(tin4, tdiv4);
+
+	clk_enable(timerclk);
+	clk_enable(tin3);
+	clk_enable(tin4);
 }
 
 static void __init s3c64xx_timer_init(void)
