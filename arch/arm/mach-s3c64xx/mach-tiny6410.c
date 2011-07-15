@@ -33,6 +33,10 @@
 #include <linux/input.h>
 #include <linux/leds.h>
 
+#include <linux/usb/android_composite.h>
+#include <linux/usb/ch9.h>
+#include <linux/usb/gadget.h>
+
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -387,6 +391,117 @@ static struct s3c_sdhci_platdata tiny6410_hsmmc1_pdata = {
     .cd_type        = S3C_SDHCI_CD_PERMANENT,
 };
 
+/*
+ * USB gadget
+ */
+
+#include <linux/usb/android_composite.h>
+#define S3C_VENDOR_ID			0x18d1
+#define S3C_UMS_PRODUCT_ID		0x4E21
+#define S3C_UMS_ADB_PRODUCT_ID		0x4E22
+#define S3C_RNDIS_PRODUCT_ID		0x4E23
+#define S3C_RNDIS_ADB_PRODUCT_ID	0x4E24
+#define MAX_USB_SERIAL_NUM	17
+
+static char *usb_functions_ums[] = {
+	"usb_mass_storage",
+};
+
+static char *usb_functions_rndis[] = {
+	"rndis",
+};
+
+static char *usb_functions_rndis_adb[] = {
+	"rndis",
+	"adb",
+};
+static char *usb_functions_ums_adb[] = {
+	"usb_mass_storage",
+	"adb",
+};
+
+static char *usb_functions_all[] = {
+	"rndis",
+	"usb_mass_storage",
+	"adb",
+};
+
+static struct android_usb_product usb_products[] = {
+	{
+		.product_id	= S3C_UMS_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_ums),
+		.functions	= usb_functions_ums,
+	},
+	{
+		.product_id	= S3C_UMS_ADB_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb),
+		.functions	= usb_functions_ums_adb,
+	},
+	{
+		.product_id	= S3C_RNDIS_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
+		.functions	= usb_functions_rndis,
+	},
+	{
+		.product_id	= S3C_RNDIS_ADB_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_rndis_adb),
+		.functions	= usb_functions_rndis_adb,
+	},
+};
+
+static char device_serial[MAX_USB_SERIAL_NUM] = "0123456789ABCDEF";
+/* standard android USB platform data */
+
+/* Information should be changed as real product for commercial release */
+static struct android_usb_platform_data android_usb_pdata = {
+	.vendor_id		= S3C_VENDOR_ID,
+	.product_id		= S3C_UMS_PRODUCT_ID,
+	.manufacturer_name	= "Samsung",
+	.product_name		= "Galaxy GT-I5700",
+	.serial_number		= device_serial,
+	.num_products		= ARRAY_SIZE(usb_products),
+	.products		= usb_products,
+	.num_functions		= ARRAY_SIZE(usb_functions_all),
+	.functions		= usb_functions_all,
+};
+
+struct platform_device spica_android_usb = {
+	.name	= "android_usb",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &android_usb_pdata,
+	},
+};
+
+static struct usb_mass_storage_platform_data ums_pdata = {
+	.vendor			= "Android",
+	.product		= "UMS Composite",
+	.release		= 1,
+	.nluns			= 1,
+};
+
+struct platform_device spica_usb_mass_storage = {
+	.name	= "usb_mass_storage",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &ums_pdata,
+	},
+};
+
+static struct usb_ether_platform_data rndis_pdata = {
+	/* ethaddr is filled by board_serialno_setup */
+	.vendorID	= 0x18d1,
+	.vendorDescr	= "Samsung",
+};
+
+struct platform_device spica_usb_rndis = {
+	.name	= "rndis",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &rndis_pdata,
+	},
+};
+
 static struct platform_device *tiny6410_devices[] __initdata = {
 	&tiny6410_device_eth,
 	&s3c_device_hsmmc0,
@@ -397,6 +512,10 @@ static struct platform_device *tiny6410_devices[] __initdata = {
 	&s3c_device_nand,
 	&s3c_device_fb,
 	&s3c_device_rtc,
+	&s3c_device_usb_hsotg,
+	&spica_android_usb,
+	&spica_usb_mass_storage,
+	&spica_usb_rndis,
 	&tiny6410_lcd_powerdev,
 	&s3c_device_adc,
 	&s3c_device_ts,
