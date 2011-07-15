@@ -29,6 +29,18 @@ struct tiny6410_1wire_ts {
 	struct input_dev	*input_dev;
 	struct device		*dev;
 
+	/* Signed fixed point 16:16 offset */
+	s16 base_x;
+	s16 base_y;
+
+	/* Signed fixed point 16:16 scale */
+	s32 scale_x;
+	s32 scale_y;
+
+	/* Screen parameters */
+	u16 width;
+	u16 height;
+
 	u16 x;
 	u16 y;
 	bool down;
@@ -39,23 +51,32 @@ static void tiny6410_1wire_ts_report(struct tiny6410_1wire_ts *ts, u32 data)
 	u16 x, y;
 	bool down;
 
-	x  = (data & 0xf00000) >> 12;
-	x |= (data & 0x00ff00) >> 8;
+	y  = (data & 0xf00000) >> 12;
+	y |= (data & 0x00ff00) >> 8;
 
-	y  = (data & 0x0f0000) >> 8;
-	y |= (data & 0x0000ff) >> 0;
+	x  = (data & 0x0f0000) >> 8;
+	x |= (data & 0x0000ff) >> 0;
 
 	down = (x != 0xfff) || (y != 0xfff);
 
 	if (x != ts->x || y != ts->y || down != ts->down) {
+		ts->x = x;
+		ts->y = y;
+		ts->down = down;
+
+		x = ((x + ts->base_x) * ts->scale_x) >> 16;
+		y = ((y + ts->base_y) * ts->scale_y) >> 16;
+
+		if (x >= ts->width)
+			x = ts->width - 1;
+
+		if (y >= ts->height)
+			y = ts->height - 1;
+
 		input_report_key(ts->input_dev, BTN_TOUCH, down);
 		input_report_abs(ts->input_dev, ABS_X, x);
 		input_report_abs(ts->input_dev, ABS_Y, y);
 		input_sync(ts->input_dev);
-
-		ts->x = x;
-		ts->y = y;
-		ts->down = down;
 	}
 }
 
@@ -74,6 +95,59 @@ static void tiny6410_1wire_ts_workfunc(struct work_struct *work)
 
 	schedule_delayed_work(delayed_work, TINY6410_1WIRE_TS_DELAY);
 }
+
+static ssize_t calibration_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct tiny6410_1wire_ts *ts = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%u %d %d %u %d %d\n",
+					ts->width, ts->base_x, ts->scale_x,
+					ts->height, ts->base_y, ts->scale_y);
+}
+
+static ssize_t calibration_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct tiny6410_1wire_ts *ts = dev_get_drvdata(dev);
+	int ret;
+	s32 base_x, base_y, scale_x, scale_y;
+	u32 width, height;
+
+	ret = sscanf(buf, "%u %d %d %u %d %d",
+			&width, &base_x, &scale_x, &height, &base_y, &scale_y);
+
+	if (ret != 6)
+		return -EINVAL;
+
+	cancel_delayed_work_sync(&ts->work);
+
+	ts->base_x = base_x;
+	ts->base_y = base_y;
+	ts->scale_x = scale_x;
+	ts->scale_y = scale_y;
+	ts->width = width;
+	ts->height = height;
+
+	input_set_abs_params(ts->input_dev, ABS_X, 0, width - 1, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_Y, 0, height - 1, 0, 0);
+
+	schedule_delayed_work(&ts->work, TINY6410_1WIRE_TS_DELAY);
+
+	return size;
+}
+
+static DEVICE_ATTR(calibration, S_IRUGO | S_IWUSR,
+					calibration_show, calibration_store);
+
+static struct attribute *tiny6410_ts_attrs[] = {
+	&dev_attr_calibration.attr,
+	NULL
+};
+
+static const struct attribute_group tiny6410_ts_attr_group = {
+	.attrs = tiny6410_ts_attrs,
+};
 
 static int __devinit tiny6410_1wire_ts_probe(struct platform_device *pdev)
 {
@@ -104,6 +178,15 @@ static int __devinit tiny6410_1wire_ts_probe(struct platform_device *pdev)
 	ts->input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	ts->input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 
+	/* Set calibration data for 1:1 operation */
+	ts->base_x = 0;
+	ts->base_y = 0;
+	ts->scale_x = 1 << 16;
+	ts->scale_y = 1 << 16;
+	ts->width = 0x1000;
+	ts->height = 0x1000;
+
+	/* Configure absolute value ranges appropriately */
 	input_set_abs_params(ts->input_dev, ABS_X, 0, 0xfff, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_Y, 0, 0xfff, 0, 0);
 
@@ -114,6 +197,9 @@ static int __devinit tiny6410_1wire_ts_probe(struct platform_device *pdev)
 		goto err_input_register;
 
 	schedule_delayed_work(&ts->work, TINY6410_1WIRE_TS_DELAY);
+
+	if(sysfs_create_group(&pdev->dev.kobj, &tiny6410_ts_attr_group))
+		dev_warn(&pdev->dev, "Failed to create sysfs group.\n");
 
 	return 0;
 
@@ -129,6 +215,8 @@ err_workqueue:
 static int __devexit tiny6410_1wire_ts_remove(struct platform_device *pdev)
 {
 	struct tiny6410_1wire_ts *ts = platform_get_drvdata(pdev);
+
+	sysfs_remove_group(&pdev->dev.kobj, &tiny6410_ts_attr_group);
 
 	destroy_workqueue(ts->workqueue);
 
