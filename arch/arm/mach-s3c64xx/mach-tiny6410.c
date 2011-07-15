@@ -512,10 +512,12 @@ static struct platform_device *tiny6410_devices[] __initdata = {
 	&s3c_device_nand,
 	&s3c_device_fb,
 	&s3c_device_rtc,
+#if 0
 	&s3c_device_usb_hsotg,
 	&spica_android_usb,
 	&spica_usb_mass_storage,
 	&spica_usb_rndis,
+#endif
 	&tiny6410_lcd_powerdev,
 	&s3c_device_adc,
 	&s3c_device_ts,
