@@ -406,6 +406,145 @@ static struct platform_device *tiny6410_devices[] __initdata = {
 };
 
 /*
+ * Platform devices for Samsung modules
+ */
+
+static struct resource s3c_g3d_resource[] = {
+	[0] = {
+		.start = S3C64XX_PA_G3D,
+		.end   = S3C64XX_PA_G3D + S3C64XX_SZ_G3D - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_S3C6410_G3D,
+		.end   = IRQ_S3C6410_G3D,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static struct resource s3c_mfc_resource[] = {
+	[0] = {
+		.start = S3C64XX_PA_MFC,
+		.end   = S3C64XX_PA_MFC + S3C64XX_SZ_MFC - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_MFC,
+		.end   = IRQ_MFC,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static struct resource s3c_jpeg_resource[] = {
+	[0] = {
+		.start = S3C64XX_PA_JPEG,
+		.end   = S3C64XX_PA_JPEG + S3C64XX_SZ_JPEG - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_JPEG,
+		.end   = IRQ_JPEG,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static struct resource s3c_camif_resource[] = {
+	[0] = {
+		.start = S3C64XX_PA_FIMC,
+		.end   = S3C64XX_PA_FIMC + S3C64XX_SZ_FIMC - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_CAMIF_C,
+		.end   = IRQ_CAMIF_C,
+		.flags = IORESOURCE_IRQ,
+	},
+	[2] = {
+		.start = IRQ_CAMIF_P,
+		.end   = IRQ_CAMIF_P,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static struct resource s3c_g2d_resource[] = {
+	[0] = {
+		.start = S3C64XX_PA_G2D,
+		.end   = S3C64XX_PA_G2D + S3C64XX_SZ_G2D - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_2D,
+		.end   = IRQ_2D,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static struct resource s3c_rotator_resource[] = {
+	[0] = {
+		.start = S3C64XX_PA_ROTATOR,
+		.end   = S3C64XX_PA_ROTATOR + S3C64XX_SZ_ROTATOR - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_ROTATOR,
+		.end   = IRQ_ROTATOR,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static struct resource s3c_pp_resource[] = {
+	[0] = {
+		.start = S3C64XX_PA_PP,
+		.end   = S3C64XX_PA_PP + S3C64XX_SZ_PP - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_POST0,
+		.end   = IRQ_POST0,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static struct platform_device *tiny6410_mod_devices[] __initdata = {
+	&(struct platform_device){
+		.name		= "s3c-g3d",
+		.id		= -1,
+		.num_resources	= ARRAY_SIZE(s3c_g3d_resource),
+		.resource	= s3c_g3d_resource,
+	}, &(struct platform_device){
+		.name		= "s3c-mfc",
+		.id		= -1,
+		.num_resources	= ARRAY_SIZE(s3c_mfc_resource),
+		.resource	= s3c_mfc_resource,
+	}, &(struct platform_device){
+		.name		= "s3c-jpeg",
+		.id		= -1,
+		.num_resources	= ARRAY_SIZE(s3c_jpeg_resource),
+		.resource	= s3c_jpeg_resource,
+	}, &(struct platform_device){
+		.name		= "s3c-fimc",
+		.id		= -1,
+		.num_resources	= ARRAY_SIZE(s3c_camif_resource),
+		.resource	= s3c_camif_resource,
+	}, &(struct platform_device){
+		.name		= "s3c-g2d",
+		.id		= -1,
+		.num_resources	= ARRAY_SIZE(s3c_g2d_resource),
+		.resource	= s3c_g2d_resource,
+	}, &(struct platform_device){
+		.name		= "s3c-rotator",
+		.id		= -1,
+		.num_resources	= ARRAY_SIZE(s3c_rotator_resource),
+		.resource	= s3c_rotator_resource,
+	}, &(struct platform_device){
+		.name		= "s3c-pp",
+		.id		= -1,
+		.num_resources	= ARRAY_SIZE(s3c_pp_resource),
+		.resource	= s3c_pp_resource,
+	}
+};
+
+/*
  * Memory Configuration (Reserved Memory Setting)
  */
 
