@@ -29,6 +29,7 @@
 #include <linux/types.h>
 #include <linux/gpio_keys.h>
 #include <linux/tiny6410_1wire.h>
+#include <linux/android_pmem.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -478,6 +479,150 @@ static void tiny6410_parse_features(
 		}
 	}
 }
+
+/*
+ * Android PMEM
+ */
+
+#ifdef CONFIG_ANDROID_PMEM
+static struct android_pmem_platform_data pmem_pdata = {
+	.name		= "pmem",
+	.no_allocator	= 1,
+	.cached		= 1,
+	.buffered	= 1,
+	.start		= RESERVED_PMEM_START,
+	.size		= RESERVED_PMEM,
+};
+
+static struct android_pmem_platform_data pmem_gpu1_pdata = {
+	.name		= "pmem_gpu1",
+	.no_allocator	= 0,
+	.cached		= 1,
+	.buffered	= 1,
+	.start		= GPU1_RESERVED_PMEM_START,
+	.size		= RESERVED_PMEM_GPU1,
+};
+
+static struct android_pmem_platform_data pmem_render_pdata = {
+	.name		= "pmem_render",
+	.no_allocator	= 1,
+	.cached		= 0,
+	.start		= RENDER_RESERVED_PMEM_START,
+	.size		= RESERVED_PMEM_RENDER,
+};
+
+static struct android_pmem_platform_data pmem_stream_pdata = {
+	.name		= "pmem_stream",
+	.no_allocator	= 1,
+	.cached		= 0,
+	.start		= STREAM_RESERVED_PMEM_START,
+	.size		= RESERVED_PMEM_STREAM,
+};
+
+static struct android_pmem_platform_data pmem_preview_pdata = {
+	.name		= "pmem_preview",
+	.no_allocator	= 1,
+	.cached		= 0,
+        .start		= PREVIEW_RESERVED_PMEM_START,
+        .size		= RESERVED_PMEM_PREVIEW,
+};
+
+static struct android_pmem_platform_data pmem_picture_pdata = {
+	.name		= "pmem_picture",
+	.no_allocator	= 1,
+	.cached		= 0,
+        .start		= PICTURE_RESERVED_PMEM_START,
+        .size		= RESERVED_PMEM_PICTURE,
+};
+
+static struct android_pmem_platform_data pmem_jpeg_pdata = {
+	.name		= "pmem_jpeg",
+	.no_allocator	= 1,
+	.cached		= 0,
+        .start		= JPEG_RESERVED_PMEM_START,
+        .size		= RESERVED_PMEM_JPEG,
+};
+
+static struct android_pmem_platform_data pmem_skia_pdata = {
+	.name		= "pmem_skia",
+	.no_allocator	= 1,
+	.cached		= 0,
+        .start		= SKIA_RESERVED_PMEM_START,
+        .size		= RESERVED_PMEM_SKIA,
+};
+
+static struct platform_device pmem_device = {
+	.name		= "android_pmem",
+	.id		= 0,
+	.dev		= { .platform_data = &pmem_pdata },
+};
+
+static struct platform_device pmem_gpu1_device = {
+	.name		= "android_pmem",
+	.id		= 1,
+	.dev		= { .platform_data = &pmem_gpu1_pdata },
+};
+
+static struct platform_device pmem_render_device = {
+	.name		= "android_pmem",
+	.id		= 2,
+	.dev		= { .platform_data = &pmem_render_pdata },
+};
+
+static struct platform_device pmem_stream_device = {
+	.name		= "android_pmem",
+	.id		= 3,
+	.dev		= { .platform_data = &pmem_stream_pdata },
+};
+
+static struct platform_device pmem_preview_device = {
+	.name		= "android_pmem",
+	.id		= 5,
+	.dev		= { .platform_data = &pmem_preview_pdata },
+};
+
+static struct platform_device pmem_picture_device = {
+	.name		= "android_pmem",
+	.id		= 6,
+	.dev		= { .platform_data = &pmem_picture_pdata },
+};
+
+static struct platform_device pmem_jpeg_device = {
+	.name		= "android_pmem",
+	.id		= 7,
+	.dev		= { .platform_data = &pmem_jpeg_pdata },
+};
+
+static struct platform_device pmem_skia_device = {
+	.name		= "android_pmem",
+	.id		= 8,
+	.dev		= { .platform_data = &pmem_skia_pdata },
+};
+
+static struct platform_device *pmem_devices[] = {
+	&pmem_device,
+	&pmem_gpu1_device,
+	&pmem_render_device,
+	&pmem_stream_device,
+	&pmem_preview_device,
+	&pmem_picture_device,
+	&pmem_jpeg_device,
+	&pmem_skia_device
+};
+
+static void __init tiny6410_add_mem_devices(void)
+{
+	unsigned i;
+	for (i = 0; i < ARRAY_SIZE(pmem_devices); ++i)
+		if (pmem_devices[i]->dev.platform_data) {
+			struct android_pmem_platform_data *pmem =
+					pmem_devices[i]->dev.platform_data;
+
+			if (pmem->size)
+				platform_device_register(pmem_devices[i]);
+		}
+}
+#endif
 
 static void __init tiny6410_machine_init(void)
 {
