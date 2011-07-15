@@ -396,6 +396,7 @@ static struct platform_device *tiny6410_devices[] __initdata = {
 #endif
 	&s3c_device_nand,
 	&s3c_device_fb,
+	&s3c_device_rtc,
 	&tiny6410_lcd_powerdev,
 	&s3c_device_adc,
 	&s3c_device_ts,
