@@ -223,6 +223,7 @@ static struct s3c_fb_pd_win tiny6410_fb_win[] = {
 		},
 		.max_bpp	= 32,
 		.default_bpp	= 16,
+		.virtual_y	= 544,
 	}, {
 		.win_mode	= {	/* 7.0" 800x480 */
 			.left_margin	= 8,
@@ -236,6 +237,7 @@ static struct s3c_fb_pd_win tiny6410_fb_win[] = {
 		},
 		.max_bpp	= 32,
 		.default_bpp	= 16,
+		.virtual_y	= 960,
 	},
 };
 
