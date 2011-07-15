@@ -33,6 +33,7 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
+#include <asm/setup.h>
 
 #include <mach/map.h>
 #include <mach/regs-fb.h>
@@ -333,6 +334,74 @@ static struct platform_device *tiny6410_devices[] __initdata = {
 	&tiny6410_1wire,
 };
 
+/*
+ * Memory Configuration (Reserved Memory Setting)
+ */
+
+#define	PHYS_SIZE			(208 * SZ_1M)
+
+#define DRAM_END_ADDR 			(PHYS_OFFSET + PHYS_SIZE)
+#define RESERVED_PMEM_END_ADDR 		(DRAM_END_ADDR)
+
+#define RESERVED_MEM_CMM		(3 * SZ_1M)
+#define RESERVED_MEM_MFC		(6 * SZ_1M)
+/* PMEM_PIC and MFC use share area */
+#define RESERVED_PMEM_PICTURE		(6 * SZ_1M)
+#define RESERVED_PMEM_JPEG		(3 * SZ_1M)
+#define RESERVED_PMEM_PREVIEW		(2 * SZ_1M)
+#define RESERVED_PMEM_RENDER	  	(2 * SZ_1M)
+#define RESERVED_PMEM_STREAM	  	(2 * SZ_1M)
+/* G3D is shared with uppper memory areas */
+#define RESERVED_G3D			(32 * SZ_1M)
+#define RESERVED_PMEM_GPU1		(RESERVED_G3D)
+#define RESERVED_PMEM			(8 * SZ_1M)
+#define RESERVED_PMEM_SKIA		(0 * SZ_1M)
+#define RESERVED_G3D_UI			(6 * SZ_1M)
+#define RESERVED_G3D_SHARED		(RESERVED_MEM_CMM \
+					+ RESERVED_MEM_MFC \
+					+ RESERVED_PMEM_STREAM \
+					+ RESERVED_PMEM_JPEG \
+					+ RESERVED_PMEM_PREVIEW \
+					+ RESERVED_PMEM_RENDER)
+#define RESERVED_G3D_APP		(RESERVED_G3D \
+					- RESERVED_G3D_UI \
+					- RESERVED_G3D_SHARED)
+
+#define CMM_RESERVED_MEM_START		(RESERVED_PMEM_END_ADDR \
+					- RESERVED_MEM_CMM)
+#define PICTURE_RESERVED_PMEM_START	(CMM_RESERVED_MEM_START \
+					- RESERVED_MEM_MFC)
+#define JPEG_RESERVED_PMEM_START	(PICTURE_RESERVED_PMEM_START \
+					- RESERVED_PMEM_JPEG)
+#define PREVIEW_RESERVED_PMEM_START	(JPEG_RESERVED_PMEM_START \
+					- RESERVED_PMEM_PREVIEW)
+#define RENDER_RESERVED_PMEM_START	(PREVIEW_RESERVED_PMEM_START \
+					- RESERVED_PMEM_RENDER)
+#define STREAM_RESERVED_PMEM_START	(RENDER_RESERVED_PMEM_START \
+					- RESERVED_PMEM_STREAM)
+/* G3D is shared with uppper memory areas */
+#define G3D_RESERVED_START		(RESERVED_PMEM_END_ADDR \
+					- RESERVED_G3D)
+#define GPU1_RESERVED_PMEM_START	(RESERVED_PMEM_END_ADDR \
+					- RESERVED_PMEM_GPU1)
+#define RESERVED_PMEM_START		(GPU1_RESERVED_PMEM_START \
+					- RESERVED_PMEM)
+#define PHYS_UNRESERVED_SIZE		(RESERVED_PMEM_START \
+					- PHYS_OFFSET)
+#define SKIA_RESERVED_PMEM_START	(0)
+
+static void __init tiny6410_fixup(struct machine_desc *desc,
+		struct tag *tags, char **cmdline, struct meminfo *mi)
+{
+	mi->nr_banks = 2;
+
+	mi->bank[0].start = PHYS_OFFSET;
+	mi->bank[0].size = SZ_128M;
+
+	mi->bank[1].start = PHYS_OFFSET + SZ_128M;
+	mi->bank[1].size = PHYS_UNRESERVED_SIZE - SZ_128M;
+}
+
 static void __init tiny6410_map_io(void)
 {
 	u32 tmp;
@@ -456,11 +525,19 @@ static void __init tiny6410_machine_init(void)
 	gpio_request(S3C64XX_GPE(0), "LCD power");
 
 	platform_add_devices(tiny6410_devices, ARRAY_SIZE(tiny6410_devices));
+
+#ifdef CONFIG_ANDROID_PMEM
+	/* Register PMEM devices */
+	tiny6410_add_mem_devices();
+#endif
+
+	platform_add_devices(tiny6410_mod_devices, ARRAY_SIZE(tiny6410_mod_devices));
 }
 
 MACHINE_START(TINY6410, "TINY6410")
 	.boot_params	= S3C64XX_PA_SDRAM + 0x100,
 	.init_irq	= s3c6410_init_irq,
+	.fixup		= tiny6410_fixup,
 	.map_io		= tiny6410_map_io,
 	.init_machine	= tiny6410_machine_init,
 	.timer		= &s3c64xx_timer,
