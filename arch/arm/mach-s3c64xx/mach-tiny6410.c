@@ -31,6 +31,7 @@
 #include <linux/tiny6410_1wire.h>
 #include <linux/android_pmem.h>
 #include <linux/input.h>
+#include <linux/leds.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -160,6 +161,52 @@ static struct s3c2410_platform_nand tiny6410_nand_info = {
 	.twrph1		= 40,
 	.nr_sets	= ARRAY_SIZE(tiny6410_nand_sets),
 	.sets		= tiny6410_nand_sets,
+};
+
+/* LEDS */
+static struct gpio_led tiny6410_led_list[] = {
+	{
+		.name = "led1",
+		.default_trigger = "heartbeat",
+		.gpio = S3C64XX_GPK(4),
+		.active_low = 1,
+		.retain_state_suspended = 0,
+		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+	}, {
+		.name = "led2",
+		.default_trigger = "nand-disk",
+		.gpio = S3C64XX_GPK(5),
+		.active_low = 1,
+		.retain_state_suspended = 0,
+		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+	}, {
+		.name = "led3",
+		.default_trigger = "mmc0",
+		.gpio = S3C64XX_GPK(6),
+		.active_low = 1,
+		.retain_state_suspended = 0,
+		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+	}, {
+		.name = "led4",
+		.default_trigger = NULL,
+		.gpio = S3C64XX_GPK(7),
+		.active_low = 1,
+		.retain_state_suspended = 0,
+		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+	},
+};
+
+static struct gpio_led_platform_data tiny6410_led_pdata = {
+	.num_leds = ARRAY_SIZE(tiny6410_led_list),
+	.leds = tiny6410_led_list,
+};
+
+static struct platform_device tiny6410_leds = {
+	.name = "leds-gpio",
+	.id = -1,
+	.dev = {
+		.platform_data	= &tiny6410_led_pdata,
+	},
 };
 
 static struct s3c_fb_pd_win tiny6410_fb_win[] = {
@@ -350,6 +397,7 @@ static struct platform_device *tiny6410_devices[] __initdata = {
 	&s3c_device_ts,
 	&s3c_device_gpio_btns,
 	&tiny6410_1wire,
+	&tiny6410_leds,
 };
 
 /*
