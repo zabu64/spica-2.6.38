@@ -58,6 +58,7 @@
 #include <plat/ts.h>
 #include <plat/gpio-cfg.h>
 #include <plat/sdhci.h>
+#include <plat/pm.h>
 
 #include <video/platform_lcd.h>
 
@@ -958,6 +959,8 @@ static void __init tiny6410_machine_init(void)
 {
 	u32 cs1;
 	struct tiny6410_features_t features = { 0 };
+
+	s3c_pm_init();
 
 	printk(KERN_INFO "TINY6410: Option string tiny6410=%s\n",
 			tiny6410_features_str);
