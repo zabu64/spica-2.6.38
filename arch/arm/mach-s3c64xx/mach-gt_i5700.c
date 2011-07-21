@@ -68,6 +68,8 @@
 #include <plat/ts.h>
 #include <plat/sdhci.h>
 #include <plat/keypad.h>
+#include <plat/pm.h>
+
 
 #include <mach/regs-modem.h>
 #include <mach/regs-gpio.h>
@@ -1478,6 +1480,8 @@ static void __init spica_map_io(void)
 
 static void __init spica_machine_init(void)
 {
+	s3c_pm_init();
+
 	s3c_init_gpio(spica_gpio_table, ARRAY_SIZE(spica_gpio_table));
 
 	/* Register I2C devices */
