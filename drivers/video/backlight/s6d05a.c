@@ -178,6 +178,9 @@ static void s6d05a_send_command_seq(struct s6d05a_data *data,
 
 static void s6d05a_set_power(struct s6d05a_data *data, int power)
 {
+	if (data->state == power)
+		return;
+
 	if (power) {
 		/* Power On Sequence */
 
