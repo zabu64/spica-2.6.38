@@ -155,6 +155,7 @@ config MACH_TINY6410
 	select S3C64XX_SETUP_FB_24BPP
 	select SAMSUNG_DEV_ADC
 	select SAMSUNG_DEV_TS
+	select S3C64XX_POWER_DOMAIN
 	select S3C64XX_GENERIC_CLOCKEVENTS
 	help
 	  Machine support for the FriendlyARM TINY6410
