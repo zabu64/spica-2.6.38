@@ -193,7 +193,7 @@ static struct gpio_led tiny6410_led_list[] = {
 		.default_state = LEDS_GPIO_DEFSTATE_OFF,
 	}, {
 		.name = "led4",
-		.default_trigger = NULL,
+		.default_trigger = "default-on",
 		.gpio = S3C64XX_GPK(7),
 		.active_low = 1,
 		.retain_state_suspended = 0,
