@@ -315,9 +315,6 @@ static struct regulator_init_data spica_ldo3_data = {
 		.apply_uV		= 0,
 		.valid_ops_mask 	= REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.state_mem		= {
-			.disabled = 1,
-		},
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(ldo3_consumer),
 	.consumer_supplies	= ldo3_consumer,
@@ -350,9 +347,6 @@ static struct regulator_init_data spica_ldo5_data = {
 		.apply_uV		= 0,
 		.valid_ops_mask 	= REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.state_mem		= {
-			.disabled = 1,
-		},
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(ldo5_consumer),
 	.consumer_supplies	= ldo5_consumer,
@@ -370,9 +364,6 @@ static struct regulator_init_data spica_ldo6_data = {
 		.apply_uV		= 0,
 		.valid_ops_mask 	= REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.state_mem		= {
-			.disabled = 1,
-		},
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(ldo6_consumer),
 	.consumer_supplies	= ldo6_consumer,
@@ -390,9 +381,6 @@ static struct regulator_init_data spica_ldo7_data = {
 		.apply_uV		= 0,
 		.valid_ops_mask 	= REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.state_mem		= {
-			.disabled = 1,
-		},
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(ldo7_consumer),
 	.consumer_supplies	= ldo7_consumer,
@@ -410,9 +398,6 @@ static struct regulator_init_data spica_ldo8_data = {
 		.apply_uV		= 0,
 		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.state_mem		= {
-			.disabled = 1,
-		},
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(ldo8_consumer),
 	.consumer_supplies	= ldo8_consumer,
@@ -444,8 +429,6 @@ static struct regulator_init_data spica_buck1_data = {
 					  REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
 		.state_mem		= {
-			.uV	= 1200000,
-			.mode	= REGULATOR_MODE_NORMAL,
 			.disabled = 1,
 		},
 	},
@@ -468,8 +451,6 @@ static struct regulator_init_data spica_buck2_data = {
 					  REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
 		.state_mem		= {
-			.uV	= 1300000,
-			.mode	= REGULATOR_MODE_NORMAL,
 			.disabled = 1,
 		},
 	},
