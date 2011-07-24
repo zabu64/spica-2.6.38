@@ -251,19 +251,12 @@ static int s6d05a_bl_update_status(struct backlight_device *bl)
 	struct s6d05a_data *data = bl_get_data(bl);
 	int new_state = 1;
 
-	if (bl->props.power != FB_BLANK_UNBLANK)
-		new_state = 0;
-	if (bl->props.state & BL_CORE_FBBLANK)
-		new_state = 0;
-	if (bl->props.state & BL_CORE_SUSPENDED)
+	if (!bl->props.brightness || bl->props.power != FB_BLANK_UNBLANK
+					|| bl->props.state & BL_CORE_FBBLANK
+					|| bl->props.state & BL_CORE_SUSPENDED)
 		new_state = 0;
 
 	data->brightness = bl->props.brightness;
-
-	if (new_state == data->state) {
-		s6d05a_set_backlight(data, data->brightness);
-		return 0;
-	}
 
 	s6d05a_set_power(data, new_state);
 
