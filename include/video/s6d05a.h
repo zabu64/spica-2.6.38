@@ -55,10 +55,6 @@ struct s6d05a_platform_data {
 	unsigned sda_gpio;
 	unsigned reset_gpio;
 
-	/* Required:  Power regulators */
-	const char *vci_regulator;
-	const char *vdd3_regulator;
-
 	/* Optional: override of power on command sequence */
 	struct s6d05a_command *power_on_seq;
 	u32 power_on_seq_len;

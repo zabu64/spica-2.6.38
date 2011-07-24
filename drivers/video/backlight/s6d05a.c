@@ -372,17 +372,13 @@ static int __devinit s6d05a_probe(struct platform_device *pdev)
 		data->power_off_seq_len = pdata->power_off_seq_len;
 	}
 
-	if (pdata->vci_regulator) {
-		vci = regulator_get(&pdev->dev, pdata->vci_regulator);
-		if (!IS_ERR(vci))
-			data->vci = vci;
-	}
+	vci = regulator_get(&pdev->dev, "vci");
+	if (!IS_ERR(vci))
+		data->vci = vci;
 
-	if (pdata->vdd3_regulator) {
-		vdd3 = regulator_get(&pdev->dev, pdata->vdd3_regulator);
-		if (!IS_ERR(vdd3))
-			data->vdd3 = vdd3;
-	}
+	vdd3 = regulator_get(&pdev->dev, "vdd3");
+	if (!IS_ERR(vdd3))
+		data->vdd3 = vdd3;
 
 	platform_set_drvdata(pdev, data);
 
