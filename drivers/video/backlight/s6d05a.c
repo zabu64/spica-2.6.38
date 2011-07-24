@@ -193,14 +193,14 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		gpio_set_value(data->reset_gpio, 0);
 		udelay(10);
 
-		/* Enable VCI if needed */
-		if (data->vci)
-			regulator_enable(data->vci);
-		udelay(10);
-
 		/* Enable VDD3 if needed */
 		if (data->vdd3)
 			regulator_enable(data->vdd3);
+		udelay(10);
+
+		/* Enable VCI if possible */
+		if (data->vci)
+			regulator_enable(data->vci);
 		udelay(10);
 
 		/* Release reset */
@@ -223,13 +223,13 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		gpio_set_value(data->reset_gpio, 0);
 
 
-		/* Disable VDD3 if possible */
-		if (data->vdd3)
-			regulator_disable(data->vdd3);
-
 		/* Disable VCI if possible */
 		if (data->vci)
 			regulator_disable(data->vci);
+
+		/* Disable VDD3 if possible */
+		if (data->vdd3)
+			regulator_disable(data->vdd3);
 
 		/* Set pins low to prevent leakage */
 		gpio_set_value(data->cs_gpio, 0);
