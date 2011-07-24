@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
+#include <linux/wakelock.h>
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -151,6 +152,8 @@ struct s3c_hsotg_ep {
  */
 struct s3c_hsotg {
 	struct usb_gadget	gadget;
+
+	struct wake_lock	wake_lock;
 
 	struct device		 *dev;
 	struct usb_gadget_driver *driver;
@@ -2920,6 +2923,8 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 {
 	int epnum, ret;
 
+	wake_lock(&hsotg->wake_lock);
+
 	dev_info(hsotg->dev, "Enabling HSOTG.");
 
 	/* enable the device */
@@ -3068,6 +3073,8 @@ static void udc_disable(struct s3c_hsotg *hsotg)
 		regulator_disable(hsotg->reg_io);
 	if (hsotg->reg_core)
 		regulator_disable(hsotg->reg_core);
+
+	wake_unlock(&hsotg->wake_lock);
 }
 
 /**
@@ -3397,6 +3404,8 @@ static int __devinit s3c_hsotg_probe(struct platform_device *pdev)
 	/* Init driver data */
 	hsotg->dev = dev;
 	hsotg->plat = plat;
+
+	wake_lock_init(&hsotg->wake_lock, WAKE_LOCK_SUSPEND, "s3c-hsotg");
 
 	/* Get device clock */
 	hsotg->clk = clk_get(&pdev->dev, "otg");
