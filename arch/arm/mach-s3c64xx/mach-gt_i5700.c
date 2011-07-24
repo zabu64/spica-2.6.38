@@ -358,7 +358,7 @@ static struct regulator_init_data spica_ldo5_data = {
 };
 
 static struct regulator_consumer_supply ldo6_consumer[] = {
-	{	.supply	= "lcd_vdd3", },
+	REGULATOR_SUPPLY("vdd3", "s6d05a-lcd")
 };
 
 static struct regulator_init_data spica_ldo6_data = {
@@ -378,7 +378,7 @@ static struct regulator_init_data spica_ldo6_data = {
 };
 
 static struct regulator_consumer_supply ldo7_consumer[] = {
-	{	.supply	= "lcd_vci", },
+	REGULATOR_SUPPLY("vci", "s6d05a-lcd")
 };
 
 static struct regulator_init_data spica_ldo7_data = {
@@ -724,8 +724,6 @@ static struct s6d05a_platform_data spica_s6d05a_pdata = {
 	.cs_gpio	= GPIO_LCD_CS_N,
 	.sck_gpio	= GPIO_LCD_SCLK,
 	.sda_gpio	= GPIO_LCD_SDI,
-	.vci_regulator	= "lcd_vci",
-	.vdd3_regulator	= "lcd_vdd3",
 };
 
 static struct platform_device spica_s6d05a = {
