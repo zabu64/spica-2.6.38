@@ -585,9 +585,6 @@ static struct clksrc_sources clkset_uhost = {
  * one clock which hides the intermediate clock from the mux.
  *
  * Note, the JPEG clock can only be an even divider...
- *
- * The scaler and LCD clocks depend on the S3C64XX version, and also
- * have a common parent divisor so are not included here.
  */
 
 /* clocks that feed other parts of the clock source tree */
@@ -818,27 +815,32 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC,	.shift = 4, .size = 1 },
 		.sources	= &clkset_mfc,
 		.disable	= 1,
+	}
+};
+
+static struct clksrc_clk lcd_clksrc = {
+	.clk	= 	{
+		.name		= "dout_lcd",
+		.id		= -1,
+	},
+	.reg_div	= { .reg = S3C_CLK_DIV1, .shift = 12, .size = 4 },
+	.reg_src	= { .reg = S3C_CLK_SRC, .shift = 26, .size = 2 },
+	.sources	= &clkset_lcd,
+};
+
+static struct clk lcd_clocks[] = {
+	{
+		.name		= "post0",
+		.id		= -1,
+		.ctrlbit	= S3C_CLKCON_SCLK_POST0,
+		.enable		= s3c64xx_sclk_ctrl,
+		.parent		= &lcd_clksrc.clk,
 	}, {
-		.clk	= {
-			.name		= "post0",
-			.id		= -1,
-			.ctrlbit	= S3C_CLKCON_SCLK_POST0,
-			.enable		= s3c64xx_sclk_ctrl,
-		},
-		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 12, .size = 4 },
-		.reg_src	= { .reg = S3C_CLK_SRC,	.shift = 26, .size = 2 },
-		.sources	= &clkset_lcd,
-		.disable	= 1,
-	}, {
-		.clk	= 	{
-			.name		= "lcd_sclk",
-			.id		= -1,
-			.ctrlbit	= S3C_CLKCON_SCLK_LCD,
-			.enable		= s3c64xx_sclk_ctrl,
-		},
-		.reg_div	= { .reg = S3C_CLK_DIV1, .shift = 12, .size = 4 },
-		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 26, .size = 2 },
-		.sources	= &clkset_lcd,
+		.name		= "lcd_sclk",
+		.id		= -1,
+		.ctrlbit	= S3C_CLKCON_SCLK_LCD,
+		.enable		= s3c64xx_sclk_ctrl,
+		.parent		= &lcd_clksrc.clk,
 	}
 };
 
@@ -974,5 +976,9 @@ void __init s3c64xx_register_clocks(unsigned long xtal,
 
 	s3c24xx_register_clocks(clks1, ARRAY_SIZE(clks1));
 	s3c_register_clksrc(clksrcs, ARRAY_SIZE(clksrcs));
+
+	s3c_register_clksrc(&lcd_clksrc, 1);
+	s3c_register_clocks(lcd_clocks, ARRAY_SIZE(lcd_clocks));
+
 	s3c_pwmclk_init();
 }
