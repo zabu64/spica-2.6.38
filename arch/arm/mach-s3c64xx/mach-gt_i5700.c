@@ -280,9 +280,6 @@ static struct i2c_gpio_platform_data spica_pmic_i2c_pdata = {
 	.sda_pin		= GPIO_PWR_I2C_SDA,
 	.scl_pin		= GPIO_PWR_I2C_SCL,
 	.udelay			= 2, /* 250KHz */
-	.sda_is_open_drain	= 0,
-	.scl_is_open_drain	= 0,
-	.scl_is_output_only	= 1,
 };
 
 static struct platform_device spica_pmic_i2c = {
@@ -504,9 +501,6 @@ static struct i2c_gpio_platform_data spica_audio_i2c_pdata = {
 	.sda_pin		= GPIO_FM_I2C_SDA,
 	.scl_pin		= GPIO_FM_I2C_SCL,
 	.udelay			= 2, /* 250KHz */
-	.sda_is_open_drain	= 0,
-	.scl_is_open_drain	= 0,
-	.scl_is_output_only	= 1,
 };
 
 static struct platform_device spica_audio_i2c = {
@@ -531,9 +525,6 @@ static struct i2c_gpio_platform_data spica_touch_i2c_pdata = {
 	.sda_pin		= GPIO_TOUCH_I2C_SDA,
 	.scl_pin		= GPIO_TOUCH_I2C_SCL,
 	.udelay			= 6, /* 83,3KHz */
-	.sda_is_open_drain	= 0,
-	.scl_is_open_drain	= 0,
-	.scl_is_output_only	= 0,
 };
 
 static struct platform_device spica_touch_i2c = {
