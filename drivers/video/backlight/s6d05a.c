@@ -193,7 +193,7 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		gpio_set_value(data->reset_gpio, 0);
 		udelay(15);
 
-		/* Enable VDD3 if needed */
+		/* Enable VDD3 if possible */
 		if (data->vdd3)
 			regulator_enable(data->vdd3);
 		udelay(15);
@@ -203,10 +203,10 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 			regulator_enable(data->vci);
 		udelay(15);
 
-		/* Release reset */
+		/* Deassert reset */
 		gpio_set_value(data->reset_gpio, 1);
 
-		/* Wait at least 10 ms */
+		/* Wait for the chip to get ready */
 		msleep(10);
 
 		/* Send power on command sequence */
@@ -219,7 +219,7 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		s6d05a_send_command_seq(data, data->power_off_seq,
 						data->power_off_seq_len);
 
-		/* Reset Assert */
+		/* Assert reset */
 		gpio_set_value(data->reset_gpio, 0);
 
 
