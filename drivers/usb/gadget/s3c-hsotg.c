@@ -170,6 +170,7 @@ struct s3c_hsotg {
 
 	unsigned int		dedicated_fifos:1;
 	unsigned int		remote_wakeup:1;
+	unsigned int		state:1;
 
 	struct dentry		*debug_root;
 	struct dentry		*debug_file;
@@ -2923,6 +2924,14 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 {
 	int epnum, ret;
 
+	if (unlikely(hsotg->state)) {
+		dev_warn(hsotg->dev,
+				"HSOTG asked to power up more than once.\n");
+		return;
+	}
+
+	hsotg->state = 1;
+
 	wake_lock(&hsotg->wake_lock);
 
 	dev_info(hsotg->dev, "Enabling HSOTG.");
@@ -3044,6 +3053,14 @@ static void udc_enable(struct s3c_hsotg *hsotg)
 static void udc_disable(struct s3c_hsotg *hsotg)
 {
 	int ep;
+
+	if (unlikely(!hsotg->state)) {
+		dev_warn(hsotg->dev,
+				"HSOTG asked to shutdown more than once.\n");
+		return;
+	}
+
+	hsotg->state = 0;
 
 	dev_info(hsotg->dev, "Disabling HSOTG.");
 
