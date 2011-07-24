@@ -118,10 +118,6 @@ static inline void s6d05a_write_word(struct s6d05a_data *data, u16 word)
 {
 	unsigned mask = 1 << 8;
 
-	/* Make sure chip select is not asserted */
-	gpio_set_value(data->cs_gpio, 1);
-	udelay(S6D05A_SPI_DELAY_USECS);
-
 	/* Clock starts with high level */
 	gpio_set_value(data->sck_gpio, 1);
 	udelay(S6D05A_SPI_DELAY_USECS);
@@ -149,6 +145,9 @@ static inline void s6d05a_write_word(struct s6d05a_data *data, u16 word)
 	/* Deassert chip select */
 	gpio_set_value(data->cs_gpio, 1);
 	udelay(S6D05A_SPI_DELAY_USECS);
+
+	/* Make the clock low to prevent leakage */
+	gpio_set_value(data->sck_gpio, 0);
 }
 
 static inline void s6d05a_send_command(struct s6d05a_data *data,
@@ -186,6 +185,9 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 
 	if (power) {
 		/* Power On Sequence */
+
+		/* Make sure the chip isn't selected */
+		gpio_set_value(data->cs_gpio, 1);
 
 		/* Assert reset */
 		gpio_set_value(data->reset_gpio, 0);
@@ -228,6 +230,10 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		/* Disable VCI if possible */
 		if (data->vci)
 			regulator_disable(data->vci);
+
+		/* Set pins low to prevent leakage */
+		gpio_set_value(data->cs_gpio, 0);
+		gpio_set_value(data->sck_gpio, 0);
 	}
 
 	data->state = power;
