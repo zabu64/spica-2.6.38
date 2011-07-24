@@ -112,7 +112,7 @@ static struct s6d05a_command s6d05a_power_off_seq[] = {
  *	Hardware interface
  */
 
-#define S6D05A_SPI_DELAY_USECS	10
+#define S6D05A_SPI_DELAY_USECS	5
 
 static inline void s6d05a_write_word(struct s6d05a_data *data, u16 word)
 {
