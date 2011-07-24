@@ -846,7 +846,8 @@ static struct s3c_fb_platdata spica_lcd_pdata __initdata = {
 	.setup_gpio	= spica_fb_gpio_setup_18bpp,
 	.win[0]		= &spica_fb_win0,
 	.win[1]		= &spica_fb_win1,
-	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
+	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB
+			| VIDCON0_CLKSEL_LCD,
 	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC
 			| VIDCON1_INV_VCLK,
 };
