@@ -458,6 +458,13 @@ static struct dev_pm_ops s6d05a_pm_ops = {
 };
 #endif
 
+static void s6d05a_shutdown(struct platform_device *pdev)
+{
+	struct s6d05a_data *data = platform_get_drvdata(pdev);
+
+	s6d05a_set_power(data, 0);
+}
+
 static struct platform_driver s6d05a_driver = {
 	.driver = {
 		.name	= "s6d05a-lcd",
@@ -468,6 +475,7 @@ static struct platform_driver s6d05a_driver = {
 	},
 	.probe		= s6d05a_probe,
 	.remove		= s6d05a_remove,
+	.shutdown	= s6d05a_shutdown,
 };
 
 /*
