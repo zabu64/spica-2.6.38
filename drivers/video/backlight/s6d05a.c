@@ -191,17 +191,17 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 
 		/* Assert reset */
 		gpio_set_value(data->reset_gpio, 0);
-		udelay(10);
+		udelay(15);
 
 		/* Enable VDD3 if needed */
 		if (data->vdd3)
 			regulator_enable(data->vdd3);
-		udelay(10);
+		udelay(15);
 
 		/* Enable VCI if possible */
 		if (data->vci)
 			regulator_enable(data->vci);
-		udelay(10);
+		udelay(15);
 
 		/* Release reset */
 		gpio_set_value(data->reset_gpio, 1);
