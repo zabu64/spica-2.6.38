@@ -16,6 +16,7 @@
 #include <linux/spi/spi.h>
 #include <linux/backlight.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_runtime.h>
 
 #include <video/s6d05a.h>
 
@@ -35,6 +36,7 @@
 /* Driver data */
 struct s6d05a_data {
 	struct backlight_device	*bl;
+	struct device *dev;
 
 	unsigned cs_gpio;
 	unsigned sck_gpio;
@@ -184,6 +186,8 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		return;
 
 	if (power) {
+		pm_runtime_get_sync(data->dev);
+
 		/* Power On Sequence */
 
 		/* Make sure the chip isn't selected */
@@ -234,6 +238,8 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		/* Set pins low to prevent leakage */
 		gpio_set_value(data->cs_gpio, 0);
 		gpio_set_value(data->sck_gpio, 0);
+
+		pm_runtime_put_sync(data->dev);
 	}
 
 	data->state = power;
@@ -352,6 +358,7 @@ static int __devinit s6d05a_probe(struct platform_device *pdev)
 	}
 
 	/* Set up driver data */
+	data->dev = &pdev->dev;
 	data->reset_gpio = pdata->reset_gpio;
 	data->cs_gpio = pdata->cs_gpio;
 	data->sck_gpio = pdata->sck_gpio;
@@ -383,6 +390,9 @@ static int __devinit s6d05a_probe(struct platform_device *pdev)
 		data->vdd3 = vdd3;
 
 	platform_set_drvdata(pdev, data);
+
+	pm_runtime_enable(data->dev);
+	pm_runtime_no_callbacks(data->dev);
 
 	/* Initialize the LCD */
 	bl->props.power = FB_BLANK_UNBLANK;
