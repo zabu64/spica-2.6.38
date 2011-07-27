@@ -445,7 +445,6 @@ static int __devexit s6d05a_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
 static int s6d05a_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -470,7 +469,6 @@ static struct dev_pm_ops s6d05a_pm_ops = {
 	.suspend	= s6d05a_suspend,
 	.resume		= s6d05a_resume,
 };
-#endif
 
 static void s6d05a_shutdown(struct platform_device *pdev)
 {
@@ -483,9 +481,7 @@ static struct platform_driver s6d05a_driver = {
 	.driver = {
 		.name	= "s6d05a-lcd",
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm	= &s6d05a_pm_ops,
-#endif
 	},
 	.probe		= s6d05a_probe,
 	.remove		= s6d05a_remove,
