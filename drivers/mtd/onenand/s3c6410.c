@@ -160,20 +160,6 @@ static inline void s3c6410_write_cmd(int value, unsigned int cmd)
 	writel(value, onenand->ahb_addr + cmd);
 }
 
-#ifdef SAMSUNG_DEBUG
-static void s3c6410_dump_reg(void)
-{
-	int i;
-
-	for (i = 0; i < 0x400; i += 0x40) {
-		printk(KERN_INFO "0x%08X: 0x%08x 0x%08x 0x%08x 0x%08x\n",
-			(unsigned int) onenand->base + i,
-			s3c6410_read_reg(i), s3c6410_read_reg(i + 0x10),
-			s3c6410_read_reg(i + 0x20), s3c6410_read_reg(i + 0x30));
-	}
-}
-#endif
-
 static unsigned int s3c6410_cmd_map(unsigned type, unsigned val)
 {
 	return (type << S3C64XX_CMD_MAP_SHIFT) | val;
@@ -208,10 +194,8 @@ static void s3c6410_onenand_reset(void)
 static unsigned short s3c6410_onenand_readw(void __iomem *addr)
 {
 	struct onenand_chip *this = onenand->mtd->priv;
-	struct device *dev = &onenand->pdev->dev;
 	int reg = addr - this->base;
 	int word_addr = reg >> 1;
-	int value;
 
 	/* It's used for probing time */
 	switch (reg) {
@@ -249,16 +233,12 @@ static unsigned short s3c6410_onenand_readw(void __iomem *addr)
 			return s3c6410_read_reg(FLASH_VER_ID_OFFSET);
 	}
 
-	value = s3c6410_read_cmd(CMD_MAP_11(onenand, word_addr)) & 0xffff;
-	dev_info(dev, "%s: Illegal access at reg 0x%x, value 0x%x\n", __func__,
-		 word_addr, value);
-	return value;
+	return s3c6410_onenand_read_cmd(CMD_MAP_11(onenand, word_addr)) & 0xffff;
 }
 
 static void s3c6410_onenand_writew(unsigned short value, void __iomem *addr)
 {
 	struct onenand_chip *this = onenand->mtd->priv;
-	struct device *dev = &onenand->pdev->dev;
 	unsigned int reg = addr - this->base;
 	unsigned int word_addr = reg >> 1;
 
@@ -293,10 +273,7 @@ static void s3c6410_onenand_writew(unsigned short value, void __iomem *addr)
 		}
 	}
 
-	dev_info(dev, "%s: Illegal access at reg 0x%x, value 0x%x\n", __func__,
-		 word_addr, value);
-
-	s3c6410_write_cmd(value, CMD_MAP_11(onenand, word_addr));
+	s3c6410_onenand_write_cmd(value, CMD_MAP_11(onenand, word_addr));
 }
 
 #ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
@@ -791,9 +768,6 @@ static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 		if (state != FL_READING)
 			cond_resched();
 	}
-
-	if (time_after(jiffies, timeout))
-		dev_warn(dev, "Wait timed out (%s).\n", state_to_str(state));
 
 	/* To get correct interrupt status in timeout case */
 	stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
