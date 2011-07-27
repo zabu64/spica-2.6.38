@@ -1297,8 +1297,6 @@ static  int s3c6410_onenand_resume(struct device *dev)
 	s3c6410_onenand_restore(s3c6410_onenand_save,
 					ARRAY_SIZE(s3c6410_onenand_save));
 
-	s3c6410_onenand_reset();
-
 	this->unlock_all(mtd);
 
 	return 0;
