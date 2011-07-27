@@ -62,7 +62,6 @@
  * Address bits
  */
 #define S3C6410_CMD_MAP_SHIFT		24
-
 #define S3C6410_FBA_SHIFT		12
 #define S3C6410_FPA_SHIFT		6
 #define S3C6410_FSA_SHIFT		4
