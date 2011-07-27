@@ -948,18 +948,18 @@ static void s3c6410_onenand_check_lock_status(struct mtd_info *mtd)
 	struct onenand_chip *this = mtd->priv;
 	struct device *dev = &onenand->pdev->dev;
 	unsigned int block, end;
-	int tmp;
+	int stat;
 
 	end = this->chipsize >> this->erase_shift;
 
 	for (block = 0; block < end; block++) {
-		unsigned int mem_addr = onenand->mem_addr(block, 0, 0);
-		tmp = s3c6410_read_cmd(CMD_MAP_01(onenand, mem_addr));
+		s3c6410_onenand_write_cmd(block,
+			CMD_MAP_11(onenand, ONENAND_REG_START_ADDRESS1 >> 1));
 
-		if (s3c6410_read_reg(INT_ERR_STAT_OFFSET) & LOCKED_BLK) {
+		stat = s3c6410_onenand_read_cmd(
+			CMD_MAP_11(onenand, ONENAND_REG_WP_STATUS >> 1));
+		if (!(stat & ONENAND_WP_US))
 			dev_err(dev, "block %d is write-protected!\n", block);
-			s3c6410_write_reg(LOCKED_BLK, INT_ERR_ACK_OFFSET);
-		}
 	}
 }
 
