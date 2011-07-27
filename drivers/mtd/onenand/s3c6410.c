@@ -740,22 +740,6 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 	return 0;
 }
 
-static const char *state_to_str(int state)
-{
-	switch (state) {
-	case FL_READING:
-		return "FL_READING";
-	case FL_WRITING:
-		return "FL_WRITING";
-	case FL_ERASING:
-		return "FL_ERASING";
-	case FL_LOCKING:
-		return "FL_LOCKING";
-	}
-
-	return "";
-}
-
 static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 {
 	struct device *dev = &onenand->pdev->dev;
