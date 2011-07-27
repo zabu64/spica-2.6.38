@@ -1228,7 +1228,7 @@ struct s3c6410_onenand_sleep_save {
 #define S3C6410_ONENAND_SAVE_ITEM(x) \
 	{ .reg = (x) }
 
-static struct s3c6410_onenand_sleep_save s3c6410_onenand_save[] = {
+static struct s3c6410_onenand_sleep_save s3c6410_onenand_save_data[] = {
 	S3C6410_ONENAND_SAVE_ITEM(S3C_MEM_CFG),
 	S3C6410_ONENAND_SAVE_ITEM(S3C_BURST_LEN),
 	S3C6410_ONENAND_SAVE_ITEM(S3C_INT_ERR_MASK),
@@ -1246,13 +1246,15 @@ static struct s3c6410_onenand_sleep_save s3c6410_onenand_save[] = {
 	S3C6410_ONENAND_SAVE_ITEM(S3C_FLASH_AUX_CNTRL),
 };
 
-static void s3c6410_onenand_save(struct sleep_save *ptr, int count)
+static void s3c6410_onenand_save(struct s3c6410_onenand_sleep_save *ptr,
+								int count)
 {
 	for (; count > 0; count--, ptr++)
 		ptr->val = s3c6410_onenand_read_reg(ptr->reg);
 }
 
-static void s3c6410_onenand_restore(struct sleep_save *ptr, int count)
+static void s3c6410_onenand_restore(
+			struct s3c6410_onenand_sleep_save *ptr, int count)
 {
 	for (; count > 0; count--, ptr++)
 		s3c6410_onenand_write_reg(ptr->val, ptr->reg);
@@ -1266,8 +1268,8 @@ static int s3c6410_onenand_suspend(struct device *dev)
 
 	this->wait(mtd, FL_PM_SUSPENDED);
 
-	s3c6410_onenand_save(s3c6410_onenand_save,
-					ARRAY_SIZE(s3c6410_onenand_save));
+	s3c6410_onenand_save(s3c6410_onenand_save_data,
+					ARRAY_SIZE(s3c6410_onenand_save_data));
 
 	return 0;
 }
@@ -1278,8 +1280,8 @@ static  int s3c6410_onenand_resume(struct device *dev)
 	struct mtd_info *mtd = platform_get_drvdata(pdev);
 	struct onenand_chip *this = mtd->priv;
 
-	s3c6410_onenand_restore(s3c6410_onenand_save,
-					ARRAY_SIZE(s3c6410_onenand_save));
+	s3c6410_onenand_restore(s3c6410_onenand_save_data,
+					ARRAY_SIZE(s3c6410_onenand_save_data));
 
 	this->unlock_all(mtd);
 
