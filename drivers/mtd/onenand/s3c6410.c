@@ -52,7 +52,7 @@
 #define MAP_10				(0x2)
 #define MAP_11				(0x3)
 
-#define S3C64XX_CMD_MAP_SHIFT		24
+#define S3C6410_CMD_MAP_SHIFT		24
 
 #define S3C6410_FBA_SHIFT		12
 #define S3C6410_FPA_SHIFT		6
@@ -140,32 +140,32 @@ static struct s3c6410_onenand *onenand;
 static const char *part_probes[] = { "cmdlinepart", NULL, };
 #endif
 
-static inline int s3c6410_read_reg(int offset)
+static inline int s3c6410_onenand_read_reg(int offset)
 {
 	return readl(onenand->base + offset);
 }
 
-static inline void s3c6410_write_reg(int value, int offset)
+static inline void s3c6410_onenand_write_reg(int value, int offset)
 {
 	writel(value, onenand->base + offset);
 }
 
-static inline int s3c6410_read_cmd(unsigned int cmd)
+static inline int s3c6410_onenand_read_cmd(unsigned int cmd)
 {
 	return readl(onenand->ahb_addr + cmd);
 }
 
-static inline void s3c6410_write_cmd(int value, unsigned int cmd)
+static inline void s3c6410_onenand_write_cmd(int value, unsigned int cmd)
 {
 	writel(value, onenand->ahb_addr + cmd);
 }
 
-static unsigned int s3c6410_cmd_map(unsigned type, unsigned val)
+static unsigned int s3c6410_onenand_cmd_map(unsigned type, unsigned val)
 {
-	return (type << S3C64XX_CMD_MAP_SHIFT) | val;
+	return (type << S3C6410_CMD_MAP_SHIFT) | val;
 }
 
-static unsigned int s3c6410_mem_addr(int fba, int fpa, int fsa)
+static unsigned int s3c6410_onenand_mem_addr(int fba, int fpa, int fsa)
 {
 	return (fba << S3C6410_FBA_SHIFT) | (fpa << S3C6410_FPA_SHIFT) |
 		(fsa << S3C6410_FSA_SHIFT);
@@ -176,19 +176,19 @@ static void s3c6410_onenand_reset(void)
 	unsigned long timeout = 0x10000;
 	int stat;
 
-	s3c6410_write_reg(ONENAND_MEM_RESET_COLD, MEM_RESET_OFFSET);
+	s3c6410_onenand_write_reg(ONENAND_MEM_RESET_COLD, MEM_RESET_OFFSET);
 	while (1 && timeout--) {
-		stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
+		stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
 		if (stat & RST_CMP)
 			break;
 	}
-	stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
-	s3c6410_write_reg(stat, INT_ERR_ACK_OFFSET);
+	stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
+	s3c6410_onenand_write_reg(stat, INT_ERR_ACK_OFFSET);
 
 	/* Clear interrupt */
-	s3c6410_write_reg(0x0, INT_ERR_ACK_OFFSET);
+	s3c6410_onenand_write_reg(0x0, INT_ERR_ACK_OFFSET);
 	/* Clear the ECC status */
-	s3c6410_write_reg(0x0, ECC_ERR_STAT_OFFSET);
+	s3c6410_onenand_write_reg(0x0, ECC_ERR_STAT_OFFSET);
 }
 
 static unsigned short s3c6410_onenand_readw(void __iomem *addr)
@@ -200,17 +200,17 @@ static unsigned short s3c6410_onenand_readw(void __iomem *addr)
 	/* It's used for probing time */
 	switch (reg) {
 	case ONENAND_REG_MANUFACTURER_ID:
-		return s3c6410_read_reg(MANUFACT_ID_OFFSET);
+		return s3c6410_onenand_read_reg(MANUFACT_ID_OFFSET);
 	case ONENAND_REG_DEVICE_ID:
-		return s3c6410_read_reg(DEVICE_ID_OFFSET);
+		return s3c6410_onenand_read_reg(DEVICE_ID_OFFSET);
 	case ONENAND_REG_VERSION_ID:
-		return s3c6410_read_reg(FLASH_VER_ID_OFFSET);
+		return s3c6410_onenand_read_reg(FLASH_VER_ID_OFFSET);
 	case ONENAND_REG_DATA_BUFFER_SIZE:
-		return s3c6410_read_reg(DATA_BUF_SIZE_OFFSET);
+		return s3c6410_onenand_read_reg(DATA_BUF_SIZE_OFFSET);
 	case ONENAND_REG_TECHNOLOGY:
-		return s3c6410_read_reg(TECH_OFFSET);
+		return s3c6410_onenand_read_reg(TECH_OFFSET);
 	case ONENAND_REG_SYS_CFG1:
-		return s3c6410_read_reg(MEM_CFG_OFFSET);
+		return s3c6410_onenand_read_reg(MEM_CFG_OFFSET);
 
 	/* Used at unlock all status */
 	case ONENAND_REG_CTRL_STATUS:
@@ -226,11 +226,11 @@ static unsigned short s3c6410_onenand_readw(void __iomem *addr)
 	/* BootRAM access control */
 	if ((unsigned int) addr < ONENAND_DATARAM && onenand->bootram_command) {
 		if (word_addr == 0)
-			return s3c6410_read_reg(MANUFACT_ID_OFFSET);
+			return s3c6410_onenand_read_reg(MANUFACT_ID_OFFSET);
 		if (word_addr == 1)
-			return s3c6410_read_reg(DEVICE_ID_OFFSET);
+			return s3c6410_onenand_read_reg(DEVICE_ID_OFFSET);
 		if (word_addr == 2)
-			return s3c6410_read_reg(FLASH_VER_ID_OFFSET);
+			return s3c6410_onenand_read_reg(FLASH_VER_ID_OFFSET);
 	}
 
 	return s3c6410_onenand_read_cmd(CMD_MAP_11(onenand, word_addr)) & 0xffff;
@@ -245,7 +245,7 @@ static void s3c6410_onenand_writew(unsigned short value, void __iomem *addr)
 	/* It's used for probing time */
 	switch (reg) {
 	case ONENAND_REG_SYS_CFG1:
-		s3c6410_write_reg(value, MEM_CFG_OFFSET);
+		s3c6410_onenand_write_reg(value, MEM_CFG_OFFSET);
 		return;
 
 	case ONENAND_REG_START_ADDRESS1:
@@ -267,7 +267,7 @@ static void s3c6410_onenand_writew(unsigned short value, void __iomem *addr)
 			return;
 		}
 		if (value == ONENAND_CMD_RESET) {
-			s3c6410_write_reg(ONENAND_MEM_RESET_COLD, MEM_RESET_OFFSET);
+			s3c6410_onenand_write_reg(ONENAND_MEM_RESET_COLD, MEM_RESET_OFFSET);
 			onenand->bootram_command = 0;
 			return;
 		}
@@ -318,12 +318,12 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 	switch (cmd) {
 	case ONENAND_CMD_UNLOCK_ALL:
 		cmd_map_10 = CMD_MAP_10(onenand, mem_addr);
-		s3c6410_write_cmd(ONENAND_UNLOCK_ALL, cmd_map_10);
+		s3c6410_onenand_write_cmd(ONENAND_UNLOCK_ALL, cmd_map_10);
 		return 0;
 
 	case ONENAND_CMD_ERASE:
 		cmd_map_10 = CMD_MAP_10(onenand, mem_addr);
-		s3c6410_write_cmd(ONENAND_ERASE_START, cmd_map_10);
+		s3c6410_onenand_write_cmd(ONENAND_ERASE_START, cmd_map_10);
 		return 0;
 
 	case ONENAND_CMD_BUFFERRAM:
@@ -362,7 +362,7 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 
 	switch (cmd) {
 	case ONENAND_CMD_READ:
-		s3c6410_write_reg(0, TRANS_SPARE_OFFSET);
+		s3c6410_onenand_write_reg(0, TRANS_SPARE_OFFSET);
 		s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH,
 			S3C2410_DMASRC_HW, onenand->ahb_phys + cmd_map_01);
 		s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH, NULL,
@@ -370,7 +370,7 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		break;
 
 	case ONENAND_CMD_READOOB:
-		s3c6410_write_reg(TSRF, TRANS_SPARE_OFFSET);
+		s3c6410_onenand_write_reg(TSRF, TRANS_SPARE_OFFSET);
 		s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH,
 			S3C2410_DMASRC_HW, onenand->ahb_phys + cmd_map_01);
 		onenand->pending_transfer.addr = onenand->oob_buf_dma + s;
@@ -381,7 +381,7 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		break;
 
 	case ONENAND_CMD_PROG:
-		s3c6410_write_reg(0, TRANS_SPARE_OFFSET);
+		s3c6410_onenand_write_reg(0, TRANS_SPARE_OFFSET);
 		s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH,
 			S3C2410_DMASRC_MEM, onenand->ahb_phys + cmd_map_01);
 		s3c2410_dma_enqueue(S3C_DMA_ONENAND_CH, NULL,
@@ -389,7 +389,7 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		break;
 
 	case ONENAND_CMD_PROGOOB:
-		s3c6410_write_reg(TSRF, TRANS_SPARE_OFFSET);
+		s3c6410_onenand_write_reg(TSRF, TRANS_SPARE_OFFSET);
 		s3c2410_dma_devconfig(S3C_DMA_ONENAND_CH,
 			S3C2410_DMASRC_MEM, onenand->ahb_phys + cmd_map_01);
 		onenand->pending_transfer.addr = onenand->oob_buf_dma + s;
@@ -443,7 +443,7 @@ static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 		/* The 20 msec is enough */
 		timeout = jiffies + msecs_to_jiffies(20);
 		while (time_before(jiffies, timeout)) {
-			stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
+			stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
 			if (stat & flags)
 				break;
 
@@ -453,8 +453,8 @@ static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 	}
 
 	/* Get interrupt status */
-	stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
-	s3c6410_write_reg(stat, INT_ERR_ACK_OFFSET);
+	stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
+	s3c6410_onenand_write_reg(stat, INT_ERR_ACK_OFFSET);
 
 	/*
 	 * In the Spec. it checks the controller status first
@@ -462,7 +462,7 @@ static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 	 * power off recovery (POR) test, it should read ECC status first
 	 */
 	if (stat & LOAD_CMP) {
-		ecc = s3c6410_read_reg(ECC_ERR_STAT_OFFSET);
+		ecc = s3c6410_onenand_read_reg(ECC_ERR_STAT_OFFSET);
 		if (ecc & ONENAND_ECC_4BIT_UNCORRECTABLE) {
 			dev_info(dev, "%s: ECC error = 0x%04x\n", __func__,
 				 ecc);
@@ -498,8 +498,8 @@ static int s3c6410_onenand_bbt_wait(struct mtd_info *mtd, int state)
 	}
 
 	/* Get interrupt status */
-	stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
-	s3c6410_write_reg(stat, INT_ERR_ACK_OFFSET);
+	stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
+	s3c6410_onenand_write_reg(stat, INT_ERR_ACK_OFFSET);
 
 	if (stat & LD_FAIL_ECC_ERR) {
 		s3c6410_onenand_reset();
@@ -507,7 +507,7 @@ static int s3c6410_onenand_bbt_wait(struct mtd_info *mtd, int state)
 	}
 
 	if (stat & LOAD_CMP) {
-		int ecc = s3c6410_read_reg(ECC_ERR_STAT_OFFSET);
+		int ecc = s3c6410_onenand_read_reg(ECC_ERR_STAT_OFFSET);
 		if (ecc & ONENAND_ECC_4BIT_UNCORRECTABLE) {
 			s3c6410_onenand_reset();
 			return ONENAND_BBT_READ_ERROR;
@@ -579,13 +579,13 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		{
 			int i;
 			for (i = 0; i < mcount; i++)
-				*m++ = s3c6410_read_cmd(cmd_map_01);
+				*m++ = s3c6410_onenand_read_cmd(cmd_map_01);
 		}
 #endif
 		return 0;
 
 	case ONENAND_CMD_READOOB:
-		s3c6410_write_reg(TSRF, TRANS_SPARE_OFFSET);
+		s3c6410_onenand_write_reg(TSRF, TRANS_SPARE_OFFSET);
 		/* Main */
 #ifdef CONFIG_MTD_ONENAND_S3C6410_BURST_READ
 		__asm__ (
@@ -603,7 +603,7 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		{
 			int i;
 			for (i = 0; i < mcount; i++)
-				*m++ = s3c6410_read_cmd(cmd_map_01);
+				*m++ = s3c6410_onenand_read_cmd(cmd_map_01);
 		}
 #endif
 		/* Spare */
@@ -623,10 +623,10 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		{
 			int i;
 			for (i = 0; i < scount; i++)
-				*s++ = s3c6410_read_cmd(cmd_map_01);
+				*s++ = s3c6410_onenand_read_cmd(cmd_map_01);
 		}
 #endif
-		s3c6410_write_reg(0, TRANS_SPARE_OFFSET);
+		s3c6410_onenand_write_reg(0, TRANS_SPARE_OFFSET);
 		return 0;
 
 	case ONENAND_CMD_PROG:
@@ -647,13 +647,13 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		{
 			int i;
 			for (i = 0; i < mcount; i++)
-				s3c6410_write_cmd(*m++, cmd_map_01);
+				s3c6410_onenand_write_cmd(*m++, cmd_map_01);
 		}
 #endif
 		return 0;
 
 	case ONENAND_CMD_PROGOOB:
-		s3c6410_write_reg(TSRF, TRANS_SPARE_OFFSET);
+		s3c6410_onenand_write_reg(TSRF, TRANS_SPARE_OFFSET);
 		/* Main - dummy write */
 #ifdef CONFIG_MTD_ONENAND_S3C6410_BURST_WRITE
 		__asm__ (
@@ -677,7 +677,7 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		{
 			int i;
 			for (i = 0; i < mcount; i++)
-				s3c6410_write_cmd(0xffffffff, cmd_map_01);
+				s3c6410_onenand_write_cmd(0xffffffff, cmd_map_01);
 		}
 #endif
 		/* Spare */
@@ -697,18 +697,18 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 		{
 			int i;
 			for (i = 0; i < scount; i++)
-				s3c6410_write_cmd(*s++, cmd_map_01);
+				s3c6410_onenand_write_cmd(*s++, cmd_map_01);
 		}
 #endif
-		s3c6410_write_reg(0, TRANS_SPARE_OFFSET);
+		s3c6410_onenand_write_reg(0, TRANS_SPARE_OFFSET);
 		return 0;
 
 	case ONENAND_CMD_UNLOCK_ALL:
-		s3c6410_write_cmd(ONENAND_UNLOCK_ALL, cmd_map_10);
+		s3c6410_onenand_write_cmd(ONENAND_UNLOCK_ALL, cmd_map_10);
 		return 0;
 
 	case ONENAND_CMD_ERASE:
-		s3c6410_write_cmd(ONENAND_ERASE_START, cmd_map_10);
+		s3c6410_onenand_write_cmd(ONENAND_ERASE_START, cmd_map_10);
 		return 0;
 
 	default:
@@ -761,7 +761,7 @@ static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 	/* The 20 msec is enough */
 	timeout = jiffies + msecs_to_jiffies(20);
 	while (time_before(jiffies, timeout)) {
-		stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
+		stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
 		if (stat & flags)
 			break;
 
@@ -770,8 +770,8 @@ static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 	}
 
 	/* To get correct interrupt status in timeout case */
-	stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
-	s3c6410_write_reg(stat, INT_ERR_ACK_OFFSET);
+	stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
+	s3c6410_onenand_write_reg(stat, INT_ERR_ACK_OFFSET);
 
 	/*
 	 * In the Spec. it checks the controller status first
@@ -779,7 +779,7 @@ static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 	 * power off recovery (POR) test, it should read ECC status first
 	 */
 	if (stat & LOAD_CMP) {
-		ecc = s3c6410_read_reg(ECC_ERR_STAT_OFFSET);
+		ecc = s3c6410_onenand_read_reg(ECC_ERR_STAT_OFFSET);
 		if (ecc & ONENAND_ECC_4BIT_UNCORRECTABLE) {
 			dev_info(dev, "%s: ECC error = 0x%04x\n", __func__,
 				 ecc);
@@ -810,13 +810,13 @@ static int s3c6410_onenand_bbt_wait(struct mtd_info *mtd, int state)
 	/* The 20 msec is enough */
 	timeout = jiffies + msecs_to_jiffies(20);
 	while (time_before(jiffies, timeout)) {
-		stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
+		stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
 		if (stat & flags)
 			break;
 	}
 	/* To get correct interrupt status in timeout case */
-	stat = s3c6410_read_reg(INT_ERR_STAT_OFFSET);
-	s3c6410_write_reg(stat, INT_ERR_ACK_OFFSET);
+	stat = s3c6410_onenand_read_reg(INT_ERR_STAT_OFFSET);
+	s3c6410_onenand_write_reg(stat, INT_ERR_ACK_OFFSET);
 
 	if (stat & LD_FAIL_ECC_ERR) {
 		s3c6410_onenand_reset();
@@ -824,7 +824,7 @@ static int s3c6410_onenand_bbt_wait(struct mtd_info *mtd, int state)
 	}
 
 	if (stat & LOAD_CMP) {
-		int ecc = s3c6410_read_reg(ECC_ERR_STAT_OFFSET);
+		int ecc = s3c6410_onenand_read_reg(ECC_ERR_STAT_OFFSET);
 		if (ecc & ONENAND_ECC_4BIT_UNCORRECTABLE) {
 			s3c6410_onenand_reset();
 			return ONENAND_BBT_READ_ERROR;
@@ -858,12 +858,12 @@ static void s3c6410_onenand_prefetch(struct mtd_info *mtd, int cmd,
 
 	switch (cmd) {
 		case ONENAND_CMD_READ:
-			s3c6410_write_reg(0, TRANS_SPARE_OFFSET);
-			s3c6410_write_cmd(ONENAND_CMD_PIPELINED_READ | pcount, cmd_map_10);
+			s3c6410_onenand_write_reg(0, TRANS_SPARE_OFFSET);
+			s3c6410_onenand_write_cmd(ONENAND_CMD_PIPELINED_READ | pcount, cmd_map_10);
 			break;
 		case ONENAND_CMD_READOOB:
-			s3c6410_write_reg(TSRF, TRANS_SPARE_OFFSET);
-			s3c6410_write_cmd(ONENAND_CMD_PIPELINED_READ | pcount, cmd_map_10);
+			s3c6410_onenand_write_reg(TSRF, TRANS_SPARE_OFFSET);
+			s3c6410_onenand_write_cmd(ONENAND_CMD_PIPELINED_READ | pcount, cmd_map_10);
 			break;
 		case ONENAND_CMD_PROG:
 		case ONENAND_CMD_PROGOOB:
@@ -893,7 +893,7 @@ static unsigned char *s3c6410_get_bufferram(struct mtd_info *mtd, int area)
 	return p;
 }
 
-static int s3c6410_read_bufferram(struct mtd_info *mtd, int area,
+static int s3c6410_onenand_read_bufferram(struct mtd_info *mtd, int area,
 				  unsigned char *buffer, int offset,
 				  size_t count)
 {
@@ -904,7 +904,7 @@ static int s3c6410_read_bufferram(struct mtd_info *mtd, int area,
 	return 0;
 }
 
-static int s3c6410_write_bufferram(struct mtd_info *mtd, int area,
+static int s3c6410_onenand_write_bufferram(struct mtd_info *mtd, int area,
 				   const unsigned char *buffer, int offset,
 				   size_t count)
 {
@@ -949,21 +949,21 @@ static void s3c6410_onenand_do_lock_cmd(struct mtd_info *mtd, loff_t ofs,
 	end_mem_addr = onenand->mem_addr(end, 0, 0);
 
 	if (cmd == ONENAND_CMD_LOCK) {
-		s3c6410_write_cmd(ONENAND_LOCK_START, CMD_MAP_10(onenand,
+		s3c6410_onenand_write_cmd(ONENAND_LOCK_START, CMD_MAP_10(onenand,
 							     start_mem_addr));
-		s3c6410_write_cmd(ONENAND_LOCK_END, CMD_MAP_10(onenand,
+		s3c6410_onenand_write_cmd(ONENAND_LOCK_END, CMD_MAP_10(onenand,
 							   end_mem_addr));
 	} else {
-		s3c6410_write_cmd(ONENAND_UNLOCK_START, CMD_MAP_10(onenand,
+		s3c6410_onenand_write_cmd(ONENAND_UNLOCK_START, CMD_MAP_10(onenand,
 							       start_mem_addr));
-		s3c6410_write_cmd(ONENAND_UNLOCK_END, CMD_MAP_10(onenand,
+		s3c6410_onenand_write_cmd(ONENAND_UNLOCK_END, CMD_MAP_10(onenand,
 							     end_mem_addr));
 	}
 
 	this->wait(mtd, FL_LOCKING);
 }
 
-static void s3c6410_unlock_all(struct mtd_info *mtd)
+static void s3c6410_onenand_unlock_all(struct mtd_info *mtd)
 {
 	struct onenand_chip *this = mtd->priv;
 	loff_t ofs = 0;
@@ -998,15 +998,15 @@ static void s3c6410_onenand_setup(struct mtd_info *mtd)
 
 	onenand->mtd = mtd;
 
-	onenand->mem_addr = s3c6410_mem_addr;
-	onenand->cmd_map = s3c6410_cmd_map;
+	onenand->mem_addr = s3c6410_onenand_mem_addr;
+	onenand->cmd_map = s3c6410_onenand_cmd_map;
 
 	this->read_word = s3c6410_onenand_readw;
 	this->write_word = s3c6410_onenand_writew;
 
 	this->wait = s3c6410_onenand_wait;
 	this->bbt_wait = s3c6410_onenand_bbt_wait;
-	this->unlock_all = s3c6410_unlock_all;
+	this->unlock_all = s3c6410_onenand_unlock_all;
 	this->command = s3c6410_onenand_command;
 
 #ifdef CONFIG_MTD_ONENAND_S3C6410_DMA
@@ -1019,8 +1019,8 @@ static void s3c6410_onenand_setup(struct mtd_info *mtd)
 	this->prefetch = s3c6410_onenand_prefetch;
 #endif
 
-	this->read_bufferram = s3c6410_read_bufferram;
-	this->write_bufferram = s3c6410_write_bufferram;
+	this->read_bufferram = s3c6410_onenand_read_bufferram;
+	this->write_bufferram = s3c6410_onenand_write_bufferram;
 }
 
 static int s3c6410_onenand_probe(struct platform_device *pdev)
@@ -1142,7 +1142,7 @@ static int s3c6410_onenand_probe(struct platform_device *pdev)
 	mtd->subpage_sft = 0;
 	this->subpagesize = mtd->writesize;
 
-	if (s3c6410_read_reg(MEM_CFG_OFFSET) & ONENAND_SYS_CFG1_SYNC_READ)
+	if (s3c6410_onenand_read_reg(MEM_CFG_OFFSET) & ONENAND_SYS_CFG1_SYNC_READ)
 		dev_info(&onenand->pdev->dev, "OneNAND Sync. Burst Read enabled\n");
 
 #ifdef CONFIG_MTD_PARTITIONS
@@ -1211,45 +1211,45 @@ static int __devexit s3c6410_onenand_remove(struct platform_device *pdev)
 	return 0;
 }
 
-struct sleep_save {
+struct s3c6410_onenand_sleep_save {
 	unsigned long	reg;
 	unsigned long	val;
 };
 
-#define SAVE_ITEM(x) \
+#define S3C6410_ONENAND_SAVE_ITEM(x) \
 	{ .reg = (x) }
 
-static struct sleep_save onenand_save[] = {
-	SAVE_ITEM(S3C_MEM_CFG),
-	SAVE_ITEM(S3C_BURST_LEN),
-	SAVE_ITEM(S3C_INT_ERR_MASK),
-	SAVE_ITEM(S3C_FBA_WIDTH),
-	SAVE_ITEM(S3C_FPA_WIDTH),
-	SAVE_ITEM(S3C_FSA_WIDTH),
-	SAVE_ITEM(S3C_DATARAM0),
-	SAVE_ITEM(S3C_DATARAM1),
-	SAVE_ITEM(S3C_TRANS_SPARE),
-	SAVE_ITEM(S3C_DBS_DFS_WIDTH),
-	SAVE_ITEM(S3C_INT_PIN_ENABLE),
-	SAVE_ITEM(S3C_INT_MON_CYC),
-	SAVE_ITEM(S3C_ACC_CLOCK),
-	SAVE_ITEM(S3C_SLOW_RD_PATH),
-	SAVE_ITEM(S3C_FLASH_AUX_CNTRL),
+static struct s3c6410_onenand_sleep_save s3c6410_onenand_save[] = {
+	S3C6410_ONENAND_SAVE_ITEM(S3C_MEM_CFG),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_BURST_LEN),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_INT_ERR_MASK),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_FBA_WIDTH),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_FPA_WIDTH),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_FSA_WIDTH),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_DATARAM0),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_DATARAM1),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_TRANS_SPARE),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_DBS_DFS_WIDTH),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_INT_PIN_ENABLE),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_INT_MON_CYC),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_ACC_CLOCK),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_SLOW_RD_PATH),
+	S3C6410_ONENAND_SAVE_ITEM(S3C_FLASH_AUX_CNTRL),
 };
 
-static void onenand_pm_do_save(struct sleep_save *ptr, int count)
+static void s3c6410_onenand_save(struct sleep_save *ptr, int count)
 {
 	for (; count > 0; count--, ptr++)
-		ptr->val = s3c6410_read_reg(ptr->reg);
+		ptr->val = s3c6410_onenand_read_reg(ptr->reg);
 }
 
-static void onenand_pm_do_restore(struct sleep_save *ptr, int count)
+static void s3c6410_onenand_restore(struct sleep_save *ptr, int count)
 {
 	for (; count > 0; count--, ptr++)
-		s3c6410_write_reg(ptr->val, ptr->reg);
+		s3c6410_onenand_write_reg(ptr->val, ptr->reg);
 }
 
-static int s3c6410_pm_ops_suspend(struct device *dev)
+static int s3c6410_onenand_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mtd_info *mtd = platform_get_drvdata(pdev);
@@ -1257,18 +1257,20 @@ static int s3c6410_pm_ops_suspend(struct device *dev)
 
 	this->wait(mtd, FL_PM_SUSPENDED);
 
-	onenand_pm_do_save(onenand_save, ARRAY_SIZE(onenand_save));
+	s3c6410_onenand_save(s3c6410_onenand_save,
+					ARRAY_SIZE(s3c6410_onenand_save));
 
 	return 0;
 }
 
-static  int s3c6410_pm_ops_resume(struct device *dev)
+static  int s3c6410_onenand_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mtd_info *mtd = platform_get_drvdata(pdev);
 	struct onenand_chip *this = mtd->priv;
 
-	onenand_pm_do_restore(onenand_save, ARRAY_SIZE(onenand_save));
+	s3c6410_onenand_restore(s3c6410_onenand_save,
+					ARRAY_SIZE(s3c6410_onenand_save));
 
 	s3c6410_onenand_reset();
 
@@ -1277,15 +1279,15 @@ static  int s3c6410_pm_ops_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops s3c6410_pm_ops = {
-	.suspend	= s3c6410_pm_ops_suspend,
-	.resume		= s3c6410_pm_ops_resume,
+static const struct dev_pm_ops s3c6410_onenand_pm_ops = {
+	.suspend	= s3c6410_onenand_suspend,
+	.resume		= s3c6410_onenand_resume,
 };
 
 static struct platform_driver s3c6410_onenand_driver = {
 	.driver         = {
 		.name	= "s3c6410-onenand",
-		.pm	= &s3c6410_pm_ops,
+		.pm	= &s3c6410_onenand_pm_ops,
 	},
 	.probe          = s3c6410_onenand_probe,
 	.remove         = __devexit_p(s3c6410_onenand_remove),
