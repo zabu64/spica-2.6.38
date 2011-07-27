@@ -30,6 +30,9 @@
 
 #include <linux/io.h>
 
+/*
+ * OneNAND Map 10 commands
+ */
 #define ONENAND_ERASE_STATUS		0x00
 #define ONENAND_MULTI_ERASE_SET		0x01
 #define ONENAND_ERASE_START		0x03
@@ -47,11 +50,17 @@
 #define ONENAND_MAIN_SPARE_ACCESS	0x16
 #define ONENAND_PIPELINE_READ		0x4000
 
+/*
+ * OneNAND command maps
+ */
 #define MAP_00				(0x0)
 #define MAP_01				(0x1)
 #define MAP_10				(0x2)
 #define MAP_11				(0x3)
 
+/*
+ * Address bits
+ */
 #define S3C6410_CMD_MAP_SHIFT		24
 
 #define S3C6410_FBA_SHIFT		12
@@ -95,6 +104,9 @@
 #define S3C_FLASH_AUX_CNTRL	(0x300)	/* Flash Auxiliary control register */
 #define S3C_FLASH_AFIFO_CNT	(0x310)	/* Number of data in asynchronous FIFO in flash controller 0. */
 
+/*
+ * Driver data
+ */
 struct s3c6410_onenand_transfer {
 	dma_addr_t	addr;
 	size_t		size;
@@ -134,12 +146,17 @@ struct s3c6410_onenand {
 #define CMD_MAP_10(dev, mem_addr)	(dev->cmd_map(MAP_10, (mem_addr)))
 #define CMD_MAP_11(dev, addr)		(dev->cmd_map(MAP_11, ((addr) << 2)))
 
+/* FIXME: Use driver data instead of this global variable. */
 static struct s3c6410_onenand *onenand;
 
+/* FIXME: This doesn't look good. */
 #ifdef CONFIG_MTD_PARTITIONS
 static const char *part_probes[] = { "cmdlinepart", NULL, };
 #endif
 
+/*
+ * I/O accessors
+ */
 static inline int s3c6410_onenand_read_reg(int offset)
 {
 	return readl(onenand->base + offset);
@@ -160,6 +177,9 @@ static inline void s3c6410_onenand_write_cmd(int value, unsigned int cmd)
 	writel(value, onenand->ahb_addr + cmd);
 }
 
+/*
+ * FIXME: Get rid of these or store shifts in driver data.
+ */
 static unsigned int s3c6410_onenand_cmd_map(unsigned type, unsigned val)
 {
 	return (type << S3C6410_CMD_MAP_SHIFT) | val;
@@ -171,6 +191,9 @@ static unsigned int s3c6410_onenand_mem_addr(int fba, int fpa, int fsa)
 		(fsa << S3C6410_FSA_SHIFT);
 }
 
+/*
+ * OneNAND driver
+ */
 static void s3c6410_onenand_reset(void)
 {
 	unsigned long timeout = 0x10000;
@@ -1023,6 +1046,9 @@ static void s3c6410_onenand_setup(struct mtd_info *mtd)
 	this->write_bufferram = s3c6410_onenand_write_bufferram;
 }
 
+/*
+ * Platform driver
+ */
 static int s3c6410_onenand_probe(struct platform_device *pdev)
 {
 	struct onenand_platform_data *pdata;
@@ -1293,6 +1319,9 @@ static struct platform_driver s3c6410_onenand_driver = {
 	.remove         = __devexit_p(s3c6410_onenand_remove),
 };
 
+/*
+ * Module init/exit
+ */
 static int __init s3c6410_onenand_init(void)
 {
 	return platform_driver_register(&s3c6410_onenand_driver);
