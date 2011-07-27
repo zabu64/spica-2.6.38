@@ -730,7 +730,8 @@ static struct platform_device spica_s6d05a = {
 	.name		= "s6d05a-lcd",
 	.id		= -1,
 	.dev		= {
-		.platform_data		= &spica_s6d05a_pdata,
+		.platform_data	= &spica_s6d05a_pdata,
+		.parent		= &s3c_device_fb.dev
 	},
 };
 
