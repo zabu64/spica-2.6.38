@@ -282,10 +282,21 @@ static int s6d05a_bl_get_brightness(struct backlight_device *bl)
 	return data->brightness;
 }
 
+static int s6d05a_bl_check_fb(struct backlight_device *bl, struct fb_info *info)
+{
+	struct s6d05a_data *data = bl_get_data(bl);
+
+	if (data->dev->parent == NULL)
+		return 1;
+
+	return data->dev->parent == info->device;
+}
+
 static struct backlight_ops s6d05a_bl_ops = {
 	.options	= BL_CORE_SUSPENDRESUME,
 	.update_status	= s6d05a_bl_update_status,
 	.get_brightness	= s6d05a_bl_get_brightness,
+	.check_fb	= s6d05a_bl_check_fb,
 };
 
 static struct backlight_properties s6d05a_bl_props = {
